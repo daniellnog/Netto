@@ -1,0 +1,21 @@
+{
+  "name": "@netto/mobile",
+  "version": "0.0.1",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "dev": "expo start",
+    "build": "expo export",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@netto/types": "*",
+    "expo": "~53.0.0",
+    "expo-router": "~4.0.0",
+    "react": "18.2.0",
+    "react-native": "0.76.7"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2"
+  }
+}
