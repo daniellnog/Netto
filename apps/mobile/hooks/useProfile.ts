@@ -33,5 +33,16 @@ export function useProfile() {
       })
   }, [session])
 
-  return { profile, loading }
+  async function updateCurrency(currency: string) {
+    if (!session?.user) return
+    const { data } = await supabase
+      .from("User")
+      .update({ currency })
+      .eq("id", session.user.id)
+      .select("id, name, email, avatarUrl, currency")
+      .single()
+    if (data) setProfile(data)
+  }
+
+  return { profile, loading, updateCurrency }
 }
