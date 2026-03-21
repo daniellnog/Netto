@@ -16,7 +16,7 @@ function RootLayoutNav() {
     if (!session && !inAuthGroup) {
       router.replace("/login")
     } else if (session && inAuthGroup) {
-      router.replace("/(tabs)")
+      router.replace("/(app)")
     }
   }, [session, loading, segments])
 
