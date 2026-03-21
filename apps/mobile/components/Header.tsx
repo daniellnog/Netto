@@ -1,5 +1,8 @@
-import { View, Text, TouchableOpacity } from "react-native"
+import { useState, useRef } from "react"
+import { View, Text, TouchableOpacity, Image, Modal, Pressable } from "react-native"
 import { useRouter, usePathname } from "expo-router"
+import { useProfile } from "../hooks/useProfile"
+import { supabase } from "../lib/supabase"
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/(app)" },
@@ -8,6 +11,89 @@ const NAV_ITEMS = [
   { label: "Limits", href: "/(app)/limits" },
   { label: "Settings", href: "/(app)/settings" },
 ]
+
+function AvatarImage() {
+  const { profile } = useProfile()
+
+  const initials = profile?.name
+    ? profile.name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()
+    : profile?.email?.[0].toUpperCase() ?? "?"
+
+  if (profile?.avatarUrl) {
+    return <Image source={{ uri: profile.avatarUrl }} className="w-8 h-8 rounded-full" />
+  }
+
+  return (
+    <View className="w-8 h-8 rounded-full bg-white/30 items-center justify-center">
+      <Text className="text-white text-xs font-bold">{initials}</Text>
+    </View>
+  )
+}
+
+function UserMenu() {
+  const [open, setOpen] = useState(false)
+  const { profile } = useProfile()
+  const router = useRouter()
+  const avatarRef = useRef<View>(null)
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 })
+
+  function handleAvatarPress() {
+    avatarRef.current?.measureInWindow((x, y, width, height) => {
+      setMenuPos({ top: y + height + 8, left: x + width - 200 })
+      setOpen(true)
+    })
+  }
+
+  async function handleLogout() {
+    setOpen(false)
+    await supabase.auth.signOut()
+  }
+
+  function handleSettings() {
+    setOpen(false)
+    router.push("/(app)/settings" as any)
+  }
+
+  return (
+    <View>
+      <TouchableOpacity ref={avatarRef} onPress={handleAvatarPress} className="ml-4">
+        <AvatarImage />
+      </TouchableOpacity>
+
+      <Modal transparent visible={open} onRequestClose={() => setOpen(false)} animationType="fade">
+        <Pressable className="flex-1" onPress={() => setOpen(false)}>
+          <View
+            className="absolute bg-surface rounded-xl shadow-lg overflow-hidden"
+            style={{ top: menuPos.top, left: menuPos.left, minWidth: 200 }}
+          >
+            {/* User info */}
+            <View className="px-4 py-3 border-b border-gray-100">
+              <Text className="text-sm font-semibold text-gray-900">{profile?.name ?? "User"}</Text>
+              <Text className="text-xs text-gray-500 mt-0.5">{profile?.email}</Text>
+            </View>
+
+            {/* Actions */}
+            <TouchableOpacity
+              className="flex-row items-center px-4 py-3 gap-3"
+              onPress={handleSettings}
+            >
+              <Text className="text-sm text-gray-700">⚙️  Settings</Text>
+            </TouchableOpacity>
+
+            <View className="h-px bg-gray-100" />
+
+            <TouchableOpacity
+              className="flex-row items-center px-4 py-3 gap-3"
+              onPress={handleLogout}
+            >
+              <Text className="text-sm text-danger">↩  Sign Out</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
+    </View>
+  )
+}
 
 export function Header() {
   const router = useRouter()
@@ -39,6 +125,8 @@ export function Header() {
             )
           })}
         </View>
+
+        <UserMenu />
       </View>
     </View>
   )
