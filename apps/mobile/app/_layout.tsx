@@ -10,7 +10,7 @@ function RootLayoutNav() {
   useEffect(() => {
     if (loading) return
 
-    const inAuthGroup = segments[0] === "login" || segments[0] === "register"
+    const inAuthGroup = segments[0] === "login"
 
     if (!session && !inAuthGroup) {
       router.replace("/login")
