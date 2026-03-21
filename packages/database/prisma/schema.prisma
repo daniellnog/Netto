@@ -18,6 +18,18 @@ model User {
 
   transactions   Transaction[]
   spendingLimits SpendingLimit[]
+  accounts       Account[]
+}
+
+model Account {
+  id               String   @id @default(cuid())
+  userId           String
+  name             String
+  icon             String   @default("💳")
+  excludeFromTotal Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
 }
 
 model Transaction {
