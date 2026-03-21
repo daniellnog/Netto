@@ -1,6 +1,5 @@
 import { useState } from "react"
 import { View, Text, TouchableOpacity } from "react-native"
-import { supabase } from "../../lib/supabase"
 
 type Section = "profile" | "currency" | "categories" | "account"
 
@@ -51,21 +50,15 @@ function CategoriesSection() {
 }
 
 function AccountSection() {
-  async function handleLogout() {
-    await supabase.auth.signOut()
-  }
-
   return (
     <View>
       <Text className="text-lg font-bold text-gray-900 mb-1">Account</Text>
       <Text className="text-sm text-gray-500 mb-6">Manage your account</Text>
 
-      <TouchableOpacity
-        className="border border-danger rounded-xl p-4 items-center"
-        onPress={handleLogout}
-      >
-        <Text className="text-danger text-base font-semibold">Sign Out</Text>
-      </TouchableOpacity>
+      <View className="bg-gray-50 rounded-xl p-4">
+        <Text className="text-xs text-gray-400 uppercase font-semibold mb-1">Delete account</Text>
+        <Text className="text-sm text-gray-600">Will be available here.</Text>
+      </View>
     </View>
   )
 }
