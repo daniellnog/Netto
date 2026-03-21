@@ -19,6 +19,7 @@ model User {
   transactions   Transaction[]
   spendingLimits SpendingLimit[]
   accounts       Account[]
+  creditCards    CreditCard[]
 }
 
 model Account {
@@ -29,7 +30,23 @@ model Account {
   excludeFromTotal Boolean  @default(false)
   createdAt        DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id])
+  user        User         @relation(fields: [userId], references: [id])
+  creditCards CreditCard[]
+}
+
+model CreditCard {
+  id               String   @id @default(cuid())
+  userId           String
+  name             String
+  icon             String   @default("💳")
+  creditLimit      Decimal  @db.Decimal(12, 2)
+  closingDay       Int
+  dueDay           Int
+  defaultAccountId String?
+  createdAt        DateTime @default(now())
+
+  user           User     @relation(fields: [userId], references: [id])
+  defaultAccount Account? @relation(fields: [defaultAccountId], references: [id])
 }
 
 model Transaction {
