@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "name": "Netto",
+    "slug": "netto",
+    "version": "0.0.1",
+    "scheme": "netto",
+    "platforms": ["ios", "android", "web"],
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}

@@ -9,10 +9,10 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  name      String
+  id        String   @id // UUID from Supabase auth.users
+  name      String?
   email     String   @unique
-  currency  String   @default("USD")
+  currency  String   @default("EUR")
   createdAt DateTime @default(now())
 
   transactions   Transaction[]
