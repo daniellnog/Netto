@@ -12,7 +12,7 @@ import {
 } from "react-native"
 import { supabase } from "../lib/supabase"
 
-type Face = "login" | "register"
+type Face = "login" | "register" | "forgot"
 
 export default function AuthScreen() {
   const [face, setFace] = useState<Face>("login")
@@ -32,6 +32,11 @@ export default function AuthScreen() {
   const [regLoading, setRegLoading] = useState(false)
   const [regError, setRegError] = useState<string | null>(null)
   const [regSuccess, setRegSuccess] = useState(false)
+
+  const [forgotEmail, setForgotEmail] = useState("")
+  const [forgotLoading, setForgotLoading] = useState(false)
+  const [forgotError, setForgotError] = useState<string | null>(null)
+  const [forgotSuccess, setForgotSuccess] = useState(false)
 
   const rotate = flipAnim.interpolate({
     inputRange: [0, 0.5, 1],
@@ -67,6 +72,14 @@ export default function AuthScreen() {
       ? (globalThis as any).window?.location?.origin
       : "netto://login"
     await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo } })
+  }
+
+  async function handleForgotPassword() {
+    if (!forgotEmail) { setForgotError("Please enter your email."); return }
+    setForgotLoading(true); setForgotError(null)
+    const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail)
+    if (error) { setForgotError(error.message); setForgotLoading(false); return }
+    setForgotSuccess(true); setForgotLoading(false)
   }
 
   async function handleRegister() {
@@ -144,7 +157,7 @@ export default function AuthScreen() {
                 </TouchableOpacity>
               </View>
 
-              <TouchableOpacity className="self-start mb-5">
+              <TouchableOpacity className="self-start mb-5" onPress={() => flip("forgot")}>
                 <Text className="text-xs text-gray-500">Forgot my password</Text>
               </TouchableOpacity>
 
@@ -165,6 +178,60 @@ export default function AuthScreen() {
                 </Text>
               </TouchableOpacity>
             </>
+          ) : face === "forgot" ? (
+            forgotSuccess ? (
+              <>
+                <Text className="text-2xl font-bold text-gray-900 text-center mb-2">Check your email</Text>
+                <Text className="text-sm text-gray-500 text-center mb-8">
+                  We sent a password reset link to {forgotEmail}.
+                </Text>
+                <TouchableOpacity
+                  className="bg-primary rounded-xl p-3.5 items-center"
+                  onPress={() => { setForgotSuccess(false); setForgotEmail(""); flip("login") }}
+                >
+                  <Text className="text-white text-base font-bold">Back to Sign In</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Text className="text-2xl font-bold text-gray-900 text-center mb-1">Reset password</Text>
+                <Text className="text-sm text-gray-500 text-center mb-6">
+                  Enter your email and we'll send you a reset link.
+                </Text>
+
+                {forgotError && <Text className="text-danger text-xs text-center mb-3">{forgotError}</Text>}
+
+                <Text className="text-sm font-semibold text-gray-700 mb-1.5">
+                  Email <Text className="text-danger">*</Text>
+                </Text>
+                <TextInput
+                  className="border border-gray-200 rounded-xl p-3 text-sm text-gray-900 bg-gray-50 mb-6"
+                  placeholder="Enter your email"
+                  placeholderTextColor="#9ca3af"
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  value={forgotEmail}
+                  onChangeText={setForgotEmail}
+                />
+
+                <TouchableOpacity
+                  className="bg-primary rounded-xl p-3.5 items-center mb-5"
+                  onPress={handleForgotPassword}
+                  disabled={forgotLoading}
+                >
+                  {forgotLoading
+                    ? <ActivityIndicator color="#fff" />
+                    : <Text className="text-white text-base font-bold">Send Reset Link</Text>
+                  }
+                </TouchableOpacity>
+
+                <TouchableOpacity className="items-center" onPress={() => flip("login")}>
+                  <Text className="text-xs text-gray-500">
+                    Back to <Text className="text-primary font-semibold">Sign In</Text>
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )
           ) : regSuccess ? (
             <>
               <Text className="text-2xl font-bold text-gray-900 text-center mb-2">Check your email</Text>
