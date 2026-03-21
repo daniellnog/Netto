@@ -4,7 +4,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   Platform,
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -12,7 +11,6 @@ import {
   Animated,
 } from "react-native"
 import { supabase } from "../lib/supabase"
-import { colors } from "../constants/theme"
 
 type Face = "login" | "register"
 
@@ -20,14 +18,12 @@ export default function AuthScreen() {
   const [face, setFace] = useState<Face>("login")
   const flipAnim = useRef(new Animated.Value(0)).current
 
-  // Login state
   const [loginEmail, setLoginEmail] = useState("")
   const [loginPassword, setLoginPassword] = useState("")
   const [showLoginPassword, setShowLoginPassword] = useState(false)
   const [loginLoading, setLoginLoading] = useState(false)
   const [loginError, setLoginError] = useState<string | null>(null)
 
-  // Register state
   const [regName, setRegName] = useState("")
   const [regEmail, setRegEmail] = useState("")
   const [regPassword, setRegPassword] = useState("")
@@ -88,205 +84,181 @@ export default function AuthScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <ScrollView contentContainerStyle={styles.screen} keyboardShouldPersistTaps="handled">
-        <Animated.View style={[styles.card, { transform: [{ perspective: 1200 }, { rotateY: rotate }] }]}>
-
+    <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1, alignItems: "center", justifyContent: "center", padding: 16 }}
+        className="bg-background"
+        keyboardShouldPersistTaps="handled"
+      >
+        <Animated.View style={{ width: "100%", maxWidth: 480, transform: [{ perspective: 1200 }, { rotateY: rotate }] }}>
+          <View className="bg-surface rounded-2xl p-8 shadow-md">
           {face === "login" ? (
             <>
-              <Text style={styles.title}>Netto</Text>
-              <Text style={styles.tagline}>net income · rendimento líquido</Text>
-              <Text style={styles.subtitle}>Sign in to your account</Text>
+              <Text className="text-3xl font-bold text-gray-900 text-center mb-1">Netto</Text>
+              <Text className="text-xs text-muted text-center mb-2">net income · rendimento líquido</Text>
+              <Text className="text-sm text-gray-500 text-center mb-6">Sign in to your account</Text>
 
-              {loginError && <Text style={styles.error}>{loginError}</Text>}
+              {loginError && <Text className="text-danger text-xs text-center mb-3">{loginError}</Text>}
 
-              <TouchableOpacity style={styles.googleButton} onPress={handleGoogleLogin}>
-                <Text style={styles.googleIcon}>G</Text>
-                <Text style={styles.googleButtonText}>Continue with Google</Text>
+              <TouchableOpacity
+                className="flex-row items-center justify-center border border-gray-200 rounded-xl p-3 mb-5 gap-2"
+                onPress={handleGoogleLogin}
+              >
+                <Text className="text-base font-bold text-blue-500">G</Text>
+                <Text className="text-sm font-semibold text-gray-900">Continue with Google</Text>
               </TouchableOpacity>
 
-              <View style={styles.divider}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>or</Text>
-                <View style={styles.dividerLine} />
+              <View className="flex-row items-center mb-5">
+                <View className="flex-1 h-px bg-gray-200" />
+                <Text className="mx-3 text-xs text-muted">or</Text>
+                <View className="flex-1 h-px bg-gray-200" />
               </View>
 
-              <Text style={styles.label}>Email <Text style={styles.required}>*</Text></Text>
+              <Text className="text-sm font-semibold text-gray-700 mb-1.5">
+                Email <Text className="text-danger">*</Text>
+              </Text>
               <TextInput
-                style={styles.input}
+                className="border border-gray-200 rounded-xl p-3 text-sm text-gray-900 bg-gray-50 mb-4"
                 placeholder="Enter your email"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor="#9ca3af"
                 autoCapitalize="none"
                 keyboardType="email-address"
                 value={loginEmail}
                 onChangeText={setLoginEmail}
               />
 
-              <Text style={styles.label}>Password <Text style={styles.required}>*</Text></Text>
-              <View style={styles.inputWrapper}>
+              <Text className="text-sm font-semibold text-gray-700 mb-1.5">
+                Password <Text className="text-danger">*</Text>
+              </Text>
+              <View className="flex-row items-center border border-gray-200 rounded-xl bg-gray-50 mb-2">
                 <TextInput
-                  style={styles.inputInner}
+                  className="flex-1 p-3 text-sm text-gray-900"
                   placeholder="Enter your password"
-                  placeholderTextColor={colors.textMuted}
+                  placeholderTextColor="#9ca3af"
                   secureTextEntry={!showLoginPassword}
                   value={loginPassword}
                   onChangeText={setLoginPassword}
                 />
-                <TouchableOpacity onPress={() => setShowLoginPassword(!showLoginPassword)} style={styles.eyeButton}>
-                  <Text style={styles.eyeIcon}>{showLoginPassword ? "🙈" : "👁"}</Text>
+                <TouchableOpacity className="px-3" onPress={() => setShowLoginPassword(!showLoginPassword)}>
+                  <Text>{showLoginPassword ? "🙈" : "👁"}</Text>
                 </TouchableOpacity>
               </View>
 
-              <TouchableOpacity style={styles.forgotPassword}>
-                <Text style={styles.forgotPasswordText}>Forgot my password</Text>
+              <TouchableOpacity className="self-start mb-5">
+                <Text className="text-xs text-gray-500">Forgot my password</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.primaryButton} onPress={handleLogin} disabled={loginLoading}>
-                {loginLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Sign In</Text>}
+              <TouchableOpacity
+                className="bg-primary rounded-xl p-3.5 items-center mb-5"
+                onPress={handleLogin}
+                disabled={loginLoading}
+              >
+                {loginLoading
+                  ? <ActivityIndicator color="#fff" />
+                  : <Text className="text-white text-base font-bold">Sign In</Text>
+                }
               </TouchableOpacity>
 
-              <TouchableOpacity onPress={() => flip("register")} style={styles.switchLink}>
-                <Text style={styles.switchText}>
-                  Don't have an account? <Text style={styles.switchTextBold}>Sign Up</Text>
+              <TouchableOpacity className="items-center" onPress={() => flip("register")}>
+                <Text className="text-xs text-gray-500">
+                  Don't have an account? <Text className="text-primary font-semibold">Sign Up</Text>
                 </Text>
               </TouchableOpacity>
             </>
           ) : regSuccess ? (
             <>
-              <Text style={styles.title}>Check your email</Text>
-              <Text style={[styles.subtitle, { marginBottom: 32 }]}>
+              <Text className="text-2xl font-bold text-gray-900 text-center mb-2">Check your email</Text>
+              <Text className="text-sm text-gray-500 text-center mb-8">
                 We sent a confirmation link to {regEmail}.{"\n"}Click it to activate your account.
               </Text>
-              <TouchableOpacity style={styles.primaryButton} onPress={() => { setRegSuccess(false); flip("login") }}>
-                <Text style={styles.primaryButtonText}>Back to Sign In</Text>
+              <TouchableOpacity
+                className="bg-primary rounded-xl p-3.5 items-center"
+                onPress={() => { setRegSuccess(false); flip("login") }}
+              >
+                <Text className="text-white text-base font-bold">Back to Sign In</Text>
               </TouchableOpacity>
             </>
           ) : (
             <>
-              <Text style={styles.title}>Create account</Text>
-              <Text style={styles.subtitle}>Start managing your finances</Text>
+              <Text className="text-2xl font-bold text-gray-900 text-center mb-1">Create account</Text>
+              <Text className="text-sm text-gray-500 text-center mb-6">Start managing your finances</Text>
 
-              {regError && <Text style={styles.error}>{regError}</Text>}
+              {regError && <Text className="text-danger text-xs text-center mb-3">{regError}</Text>}
 
-              <Text style={styles.label}>Full name <Text style={styles.required}>*</Text></Text>
+              <Text className="text-sm font-semibold text-gray-700 mb-1.5">
+                Full name <Text className="text-danger">*</Text>
+              </Text>
               <TextInput
-                style={styles.input}
+                className="border border-gray-200 rounded-xl p-3 text-sm text-gray-900 bg-gray-50 mb-4"
                 placeholder="Enter your name"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor="#9ca3af"
                 value={regName}
                 onChangeText={setRegName}
               />
 
-              <Text style={styles.label}>Email <Text style={styles.required}>*</Text></Text>
+              <Text className="text-sm font-semibold text-gray-700 mb-1.5">
+                Email <Text className="text-danger">*</Text>
+              </Text>
               <TextInput
-                style={styles.input}
+                className="border border-gray-200 rounded-xl p-3 text-sm text-gray-900 bg-gray-50 mb-4"
                 placeholder="Enter your email"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor="#9ca3af"
                 autoCapitalize="none"
                 keyboardType="email-address"
                 value={regEmail}
                 onChangeText={setRegEmail}
               />
 
-              <Text style={styles.label}>Password <Text style={styles.required}>*</Text></Text>
-              <View style={styles.inputWrapper}>
+              <Text className="text-sm font-semibold text-gray-700 mb-1.5">
+                Password <Text className="text-danger">*</Text>
+              </Text>
+              <View className="flex-row items-center border border-gray-200 rounded-xl bg-gray-50 mb-4">
                 <TextInput
-                  style={styles.inputInner}
+                  className="flex-1 p-3 text-sm text-gray-900"
                   placeholder="At least 6 characters"
-                  placeholderTextColor={colors.textMuted}
+                  placeholderTextColor="#9ca3af"
                   secureTextEntry={!showRegPassword}
                   value={regPassword}
                   onChangeText={setRegPassword}
                 />
-                <TouchableOpacity onPress={() => setShowRegPassword(!showRegPassword)} style={styles.eyeButton}>
-                  <Text style={styles.eyeIcon}>{showRegPassword ? "🙈" : "👁"}</Text>
+                <TouchableOpacity className="px-3" onPress={() => setShowRegPassword(!showRegPassword)}>
+                  <Text>{showRegPassword ? "🙈" : "👁"}</Text>
                 </TouchableOpacity>
               </View>
 
-              <Text style={styles.label}>Confirm password <Text style={styles.required}>*</Text></Text>
+              <Text className="text-sm font-semibold text-gray-700 mb-1.5">
+                Confirm password <Text className="text-danger">*</Text>
+              </Text>
               <TextInput
-                style={[styles.input, { marginBottom: 24 }]}
+                className="border border-gray-200 rounded-xl p-3 text-sm text-gray-900 bg-gray-50 mb-6"
                 placeholder="Repeat your password"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor="#9ca3af"
                 secureTextEntry
                 value={regConfirm}
                 onChangeText={setRegConfirm}
               />
 
-              <TouchableOpacity style={styles.primaryButton} onPress={handleRegister} disabled={regLoading}>
-                {regLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Create Account</Text>}
+              <TouchableOpacity
+                className="bg-primary rounded-xl p-3.5 items-center mb-5"
+                onPress={handleRegister}
+                disabled={regLoading}
+              >
+                {regLoading
+                  ? <ActivityIndicator color="#fff" />
+                  : <Text className="text-white text-base font-bold">Create Account</Text>
+                }
               </TouchableOpacity>
 
-              <TouchableOpacity onPress={() => flip("login")} style={styles.switchLink}>
-                <Text style={styles.switchText}>
-                  Already have an account? <Text style={styles.switchTextBold}>Sign In</Text>
+              <TouchableOpacity className="items-center" onPress={() => flip("login")}>
+                <Text className="text-xs text-gray-500">
+                  Already have an account? <Text className="text-primary font-semibold">Sign In</Text>
                 </Text>
               </TouchableOpacity>
             </>
           )}
+          </View>
         </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>
   )
 }
-
-const styles = StyleSheet.create({
-  screen: {
-    flexGrow: 1,
-    backgroundColor: colors.background,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 16,
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: 32,
-    width: "100%",
-    maxWidth: 480,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
-  },
-  title: { fontSize: 28, fontWeight: "bold", color: colors.text, textAlign: "center", marginBottom: 4 },
-  tagline: { fontSize: 12, color: colors.textMuted, textAlign: "center", marginBottom: 8 },
-  subtitle: { fontSize: 15, color: colors.textSecondary, textAlign: "center", marginBottom: 24 },
-  error: { color: colors.error, fontSize: 13, textAlign: "center", marginBottom: 12 },
-  googleButton: {
-    flexDirection: "row", alignItems: "center", justifyContent: "center",
-    borderWidth: 1, borderColor: colors.border, borderRadius: 10,
-    padding: 13, marginBottom: 20, gap: 10,
-  },
-  googleIcon: { fontSize: 16, fontWeight: "bold", color: "#4285F4" },
-  googleButtonText: { fontSize: 15, fontWeight: "600", color: colors.text },
-  divider: { flexDirection: "row", alignItems: "center", marginBottom: 20 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
-  dividerText: { marginHorizontal: 12, color: colors.textMuted, fontSize: 13 },
-  label: { fontSize: 14, fontWeight: "600", color: "#374151", marginBottom: 6 },
-  required: { color: colors.required },
-  input: {
-    borderWidth: 1, borderColor: colors.border, borderRadius: 10,
-    padding: 13, fontSize: 15, color: colors.text,
-    backgroundColor: colors.inputBackground, marginBottom: 16,
-  },
-  inputWrapper: {
-    flexDirection: "row", alignItems: "center",
-    borderWidth: 1, borderColor: colors.border, borderRadius: 10,
-    backgroundColor: colors.inputBackground, marginBottom: 8,
-  },
-  inputInner: { flex: 1, padding: 13, fontSize: 15, color: colors.text },
-  eyeButton: { paddingHorizontal: 14 },
-  eyeIcon: { fontSize: 16 },
-  forgotPassword: { alignSelf: "flex-start", marginBottom: 20 },
-  forgotPasswordText: { fontSize: 13, color: colors.textSecondary },
-  primaryButton: {
-    backgroundColor: colors.primary, borderRadius: 10,
-    padding: 14, alignItems: "center", marginBottom: 20,
-  },
-  primaryButtonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
-  switchLink: { alignItems: "center" },
-  switchText: { fontSize: 13, color: colors.textSecondary },
-  switchTextBold: { color: colors.primary, fontWeight: "600" },
-})
