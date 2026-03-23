@@ -1,7 +1,8 @@
 import { useState, useRef } from "react"
-import { View, Text, TouchableOpacity, Image, Modal, Pressable } from "react-native"
+import { View, Text, TouchableOpacity, Modal, Pressable } from "react-native"
 import { useRouter, usePathname } from "expo-router"
 import { useProfile } from "../hooks/useProfile"
+import { useAuth } from "../context/auth"
 import { supabase } from "../lib/supabase"
 
 const NAV_ITEMS = [
@@ -14,13 +15,19 @@ const NAV_ITEMS = [
 
 function AvatarImage() {
   const { profile } = useProfile()
+  const { session } = useAuth()
 
-  const initials = profile?.name
-    ? profile.name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()
-    : profile?.email?.[0].toUpperCase() ?? "?"
+  const meta = session?.user?.user_metadata
+  const avatarUrl = profile?.avatarUrl ?? meta?.avatar_url ?? meta?.picture ?? null
 
-  if (profile?.avatarUrl) {
-    return <Image source={{ uri: profile.avatarUrl }} className="w-8 h-8 rounded-full" />
+  const initials = (profile?.name ?? meta?.full_name ?? meta?.name ?? "")
+    .split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase() || "?"
+
+  if (avatarUrl) {
+    return (
+      // @ts-ignore – img is valid on web
+      <img src={avatarUrl} style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "cover" }} referrerPolicy="no-referrer" />
+    )
   }
 
   return (

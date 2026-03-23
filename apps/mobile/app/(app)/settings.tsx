@@ -1,16 +1,14 @@
 import { useState, useEffect } from "react"
-import { View, Text, TouchableOpacity, Pressable, TextInput } from "react-native"
+import { View, Text, TouchableOpacity, Pressable, TextInput, Modal, ScrollView } from "react-native"
 import { useProfile } from "../../hooks/useProfile"
 import { useAuth } from "../../context/auth"
 import { supabase } from "../../lib/supabase"
 
-type Section = "profile" | "currency" | "accounts" | "cards" | "categories" | "account"
+type Section = "profile" | "finances" | "categories" | "account"
 
 const SECTIONS: { id: Section; label: string; description: string }[] = [
   { id: "profile", label: "Profile", description: "Your personal information" },
-  { id: "currency", label: "Currency", description: "Default currency" },
-  { id: "accounts", label: "Accounts", description: "Bank accounts & wallets" },
-  { id: "cards", label: "Credit Cards", description: "Manage your cards" },
+  { id: "finances", label: "Finances", description: "Currency, accounts & cards" },
   { id: "categories", label: "Categories", description: "Manage categories" },
   { id: "account", label: "Account", description: "Account actions" },
 ]
@@ -18,13 +16,70 @@ const SECTIONS: { id: Section; label: string; description: string }[] = [
 // ─── Profile ────────────────────────────────────────────────────────────────
 
 function ProfileSection() {
+  const { profile, updateAvatar } = useProfile()
+  const { session } = useAuth()
+  const [uploading, setUploading] = useState(false)
+
+  const meta = session?.user?.user_metadata
+  const avatarUrl = profile?.avatarUrl ?? meta?.avatar_url ?? meta?.picture ?? null
+  const name = profile?.name ?? meta?.full_name ?? meta?.name ?? null
+  const email = profile?.email ?? session?.user?.email ?? null
+
+  const initials = name
+    ? name.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase()
+    : email?.[0]?.toUpperCase() ?? "?"
+
+  function handleAvatarClick() {
+    const input = document.createElement("input")
+    input.type = "file"
+    input.accept = "image/*"
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (!file) return
+      setUploading(true)
+      try {
+        await updateAvatar(file)
+      } finally {
+        setUploading(false)
+      }
+    }
+    input.click()
+  }
+
   return (
     <View>
       <Text className="text-lg font-bold text-gray-900 mb-1">Profile</Text>
-      <Text className="text-sm text-gray-500 mb-6">Manage your personal information</Text>
-      <View className="bg-gray-50 rounded-xl p-4">
-        <Text className="text-xs text-gray-400 uppercase font-semibold mb-1">Coming soon</Text>
-        <Text className="text-sm text-gray-600">Profile editing will be available here.</Text>
+      <Text className="text-sm text-gray-500 mb-6">Your personal information</Text>
+
+      <View className="flex-row items-center gap-4 mb-6">
+        {/* @ts-ignore – onClick/cursor valid on web */}
+        <div onClick={handleAvatarClick} style={{ position: "relative", cursor: "pointer", borderRadius: "50%", width: 64, height: 64 }}>
+          {avatarUrl ? (
+            // @ts-ignore
+            <img src={avatarUrl} style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover", display: "block" }} referrerPolicy="no-referrer" />
+          ) : (
+            <View className="w-16 h-16 rounded-full bg-primary items-center justify-center">
+              <Text className="text-white text-xl font-bold">{initials}</Text>
+            </View>
+          )}
+          {/* @ts-ignore */}
+          <div style={{ position: "absolute", inset: 0, borderRadius: "50%", backgroundColor: uploading ? "rgba(0,0,0,0.4)" : "rgba(0,0,0,0)", display: "flex", alignItems: "center", justifyContent: "center", transition: "background-color 0.15s" }}
+            onMouseEnter={(e: any) => { if (!uploading) e.currentTarget.style.backgroundColor = "rgba(0,0,0,0.35)" }}
+            onMouseLeave={(e: any) => { if (!uploading) e.currentTarget.style.backgroundColor = "rgba(0,0,0,0)" }}
+          >
+            {/* @ts-ignore */}
+            <span style={{ color: "white", fontSize: 18, opacity: uploading ? 1 : 0, transition: "opacity 0.15s", userSelect: "none" }}
+              onMouseEnter={(e: any) => { (e.currentTarget as any).style.opacity = "1" }}
+              onMouseLeave={(e: any) => { if (!uploading) (e.currentTarget as any).style.opacity = "0" }}
+            >
+              {uploading ? "..." : "✎"}
+            </span>
+          </div>
+        </div>
+        <View>
+          <Text className="text-base font-semibold text-gray-900">{name ?? "—"}</Text>
+          <Text className="text-sm text-gray-500 mt-0.5">{email ?? "—"}</Text>
+        </View>
       </View>
     </View>
   )
@@ -47,32 +102,85 @@ const CURRENCIES = [
 
 function CurrencySection() {
   const { profile, updateCurrency } = useProfile()
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState("")
+
+  const selected = CURRENCIES.find((c) => c.code === profile?.currency)
+  const filtered = CURRENCIES.filter(
+    (c) =>
+      c.label.toLowerCase().includes(search.toLowerCase()) ||
+      c.code.toLowerCase().includes(search.toLowerCase())
+  )
+
+  function handleSelect(code: string) {
+    updateCurrency(code)
+    setOpen(false)
+    setSearch("")
+  }
 
   return (
     <View>
-      <Text className="text-lg font-bold text-gray-900 mb-1">Currency</Text>
-      <Text className="text-sm text-gray-500 mb-6">Choose your default currency for transactions</Text>
-      <View className="bg-gray-50 rounded-xl overflow-hidden w-[40%]">
-        {CURRENCIES.map((c, i) => {
-          const isSelected = profile?.currency === c.code
-          return (
-            <Pressable
-              key={c.code}
-              onPress={() => updateCurrency(c.code)}
-              className={`flex-row items-center px-4 py-3 ${i > 0 ? "border-t border-gray-100" : ""} ${isSelected ? "bg-primary/10" : "hover:bg-gray-100"}`}
-            >
-              <View className="w-10 items-center">
-                <Text className="text-base font-semibold text-gray-500">{c.symbol}</Text>
-              </View>
-              <View className="flex-1 ml-2">
-                <Text className={`text-sm font-medium ${isSelected ? "text-primary" : "text-gray-800"}`}>{c.label}</Text>
-                <Text className="text-xs text-gray-400">{c.code}</Text>
-              </View>
-              {isSelected && <Text className="text-primary font-bold text-base">✓</Text>}
-            </Pressable>
-          )
-        })}
-      </View>
+      <Text className="text-sm font-bold text-gray-700 mb-3">Currency</Text>
+
+      <Pressable
+        onPress={() => setOpen(true)}
+        className="flex-row items-center bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 hover:bg-gray-100"
+        style={{ alignSelf: "flex-start", minWidth: 220 }}
+      >
+        {selected ? (
+          <>
+            <Text className="text-base font-semibold text-gray-500 w-8">{selected.symbol}</Text>
+            <View className="flex-1 ml-2">
+              <Text className="text-sm font-medium text-gray-800">{selected.label}</Text>
+              <Text className="text-xs text-gray-400">{selected.code}</Text>
+            </View>
+          </>
+        ) : (
+          <Text className="text-sm text-gray-400 flex-1">Select currency</Text>
+        )}
+        <Text className="text-gray-400 ml-3 text-xs">▼</Text>
+      </Pressable>
+
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <Pressable className="flex-1 bg-black/40 items-center justify-center" onPress={() => { setOpen(false); setSearch("") }}>
+          <Pressable className="bg-white rounded-2xl overflow-hidden" style={{ width: 440, maxHeight: 480 }} onPress={() => {}}>
+            <View className="px-4 pt-4 pb-3 border-b border-gray-100">
+              <Text className="text-sm font-bold text-gray-900 mb-3">Select currency</Text>
+              <TextInput
+                value={search}
+                onChangeText={setSearch}
+                placeholder="Search..."
+                autoFocus
+                className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800"
+              />
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {filtered.map((c, i) => {
+                const isSelected = profile?.currency === c.code
+                return (
+                  <Pressable
+                    key={c.code}
+                    onPress={() => handleSelect(c.code)}
+                    className={`flex-row items-center px-4 py-3 ${i > 0 ? "border-t border-gray-100" : ""} ${isSelected ? "bg-primary/10" : "hover:bg-gray-50"}`}
+                  >
+                    <Text className="text-base font-semibold text-gray-500 w-8">{c.symbol}</Text>
+                    <View className="flex-1 ml-2">
+                      <Text className={`text-sm font-medium ${isSelected ? "text-primary" : "text-gray-800"}`}>{c.label}</Text>
+                      <Text className="text-xs text-gray-400">{c.code}</Text>
+                    </View>
+                    {isSelected && <Text className="text-primary font-bold">✓</Text>}
+                  </Pressable>
+                )
+              })}
+              {filtered.length === 0 && (
+                <View className="px-4 py-6 items-center">
+                  <Text className="text-sm text-gray-400">No currencies found</Text>
+                </View>
+              )}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   )
 }
@@ -91,11 +199,13 @@ type AccountRow = {
 function AccountsSection() {
   const { session } = useAuth()
   const [accounts, setAccounts] = useState<AccountRow[]>([])
-  const [adding, setAdding] = useState(false)
+  const [modalVisible, setModalVisible] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [newName, setNewName] = useState("")
   const [newIcon, setNewIcon] = useState("💳")
   const [newExclude, setNewExclude] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!session?.user) return
@@ -107,21 +217,35 @@ function AccountsSection() {
       .then(({ data }) => setAccounts(data ?? []))
   }, [session])
 
-  async function handleAdd() {
-    if (!newName.trim() || !session?.user) return
+  function handleOpenEdit(account: AccountRow) {
+    setEditingId(account.id)
+    setNewName(account.name)
+    setNewIcon(account.icon)
+    setNewExclude(account.excludeFromTotal)
+    setModalVisible(true)
+  }
+
+  async function handleSave() {
+    if (!newName.trim()) { setSaveError("Name is required."); return }
+    if (!session?.user) return
+    setSaveError(null)
     setSaving(true)
-    const { data } = await supabase
-      .from("Account")
-      .insert({ userId: session.user.id, name: newName.trim(), icon: newIcon, excludeFromTotal: newExclude })
-      .select("id, name, icon, excludeFromTotal")
-      .single()
-    if (data) {
-      setAccounts((prev) => [...prev, data])
-      setNewName("")
-      setNewIcon("💳")
-      setNewExclude(false)
-      setAdding(false)
+    if (editingId) {
+      const { error } = await supabase
+        .from("Account")
+        .update({ name: newName.trim(), icon: newIcon, excludeFromTotal: newExclude })
+        .eq("id", editingId)
+      if (error) { setSaveError(error.message); setSaving(false); return }
+      setAccounts((prev) => prev.map((a) => a.id === editingId ? { ...a, name: newName.trim(), icon: newIcon, excludeFromTotal: newExclude } : a))
+    } else {
+      const { data } = await supabase
+        .from("Account")
+        .insert({ userId: session.user.id, name: newName.trim(), icon: newIcon, excludeFromTotal: newExclude })
+        .select("id, name, icon, excludeFromTotal")
+        .single()
+      if (data) setAccounts((prev) => [...prev, data])
     }
+    handleCancel()
     setSaving(false)
   }
 
@@ -136,16 +260,17 @@ function AccountsSection() {
   }
 
   function handleCancel() {
-    setAdding(false)
+    setModalVisible(false)
+    setEditingId(null)
     setNewName("")
     setNewIcon("💳")
     setNewExclude(false)
+    setSaveError(null)
   }
 
   return (
     <View>
-      <Text className="text-lg font-bold text-gray-900 mb-1">Accounts</Text>
-      <Text className="text-sm text-gray-500 mb-6">Manage your bank accounts and wallets</Text>
+      <Text className="text-sm font-bold text-gray-700 mb-4">Accounts</Text>
 
       <View className="w-[50%]">
         {accounts.length > 0 && (
@@ -165,6 +290,9 @@ function AccountsSection() {
                     Excl. total
                   </Text>
                 </Pressable>
+                <Pressable onPress={() => handleOpenEdit(account)} className="hover:opacity-70 mr-3">
+                  <Text className="text-gray-400 text-sm">✎</Text>
+                </Pressable>
                 <Pressable onPress={() => handleDelete(account.id)} className="hover:opacity-70">
                   <Text className="text-danger text-sm">✕</Text>
                 </Pressable>
@@ -173,30 +301,42 @@ function AccountsSection() {
           </View>
         )}
 
-        {adding ? (
-          <View className="bg-gray-50 rounded-xl p-4">
+        <Pressable
+          onPress={() => setModalVisible(true)}
+          className="border border-dashed border-gray-300 rounded-xl py-3 items-center hover:bg-gray-50"
+        >
+          <Text className="text-sm text-gray-400 font-medium">+ Add account</Text>
+        </Pressable>
+      </View>
+
+      <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={handleCancel}>
+        <Pressable className="flex-1 bg-black/40 items-center justify-center" onPress={handleCancel}>
+          <Pressable className="bg-white rounded-2xl p-6" style={{ width: 440 }} onPress={() => {}}>
+            <Text className="text-base font-bold text-gray-900 mb-4">{editingId ? "Edit Account" : "Add Account"}</Text>
+
             <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">Icon</Text>
             <View className="flex-row flex-wrap gap-2 mb-4">
               {ACCOUNT_ICONS.map((icon) => (
                 <TouchableOpacity
                   key={icon}
                   onPress={() => setNewIcon(icon)}
-                  className={`w-9 h-9 rounded-lg items-center justify-center ${newIcon === icon ? "bg-primary/15 border border-primary" : "bg-white border border-gray-200"}`}
+                  className={`w-9 h-9 rounded-lg items-center justify-center ${newIcon === icon ? "bg-primary/15 border border-primary" : "bg-gray-50 border border-gray-200"}`}
                 >
                   <Text className="text-lg">{icon}</Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">Name</Text>
+            <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">Name <Text className="text-danger">*</Text></Text>
             <TextInput
               value={newName}
               onChangeText={setNewName}
               placeholder="e.g. Main checking account"
-              className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 mb-4"
+              autoFocus
+              className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 mb-4"
             />
 
-            <Pressable onPress={() => setNewExclude((v) => !v)} className="flex-row items-center gap-3 mb-4">
+            <Pressable onPress={() => setNewExclude((v) => !v)} className="flex-row items-center gap-3 mb-6">
               <View className={`w-5 h-5 rounded border-2 items-center justify-center ${newExclude ? "bg-primary border-primary" : "border-gray-300 bg-white"}`}>
                 {newExclude && <Text className="text-white text-xs font-bold">✓</Text>}
               </View>
@@ -204,27 +344,17 @@ function AccountsSection() {
             </Pressable>
 
             <View className="flex-row gap-2">
-              <TouchableOpacity
-                onPress={handleAdd}
-                disabled={!newName.trim() || saving}
-                className="flex-1 bg-primary rounded-lg py-2 items-center"
-              >
-                <Text className="text-white text-sm font-semibold">{saving ? "Saving..." : "Add"}</Text>
+              <TouchableOpacity onPress={handleSave} disabled={saving} className="flex-1 bg-primary rounded-lg py-2.5 items-center">
+                <Text className="text-white text-sm font-semibold">{saving ? "Saving..." : editingId ? "Save" : "Add"}</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={handleCancel} className="flex-1 bg-gray-200 rounded-lg py-2 items-center">
+              <TouchableOpacity onPress={handleCancel} className="flex-1 bg-gray-100 rounded-lg py-2.5 items-center">
                 <Text className="text-gray-700 text-sm font-semibold">Cancel</Text>
               </TouchableOpacity>
             </View>
-          </View>
-        ) : (
-          <Pressable
-            onPress={() => setAdding(true)}
-            className="border border-dashed border-gray-300 rounded-xl py-3 items-center hover:bg-gray-50"
-          >
-            <Text className="text-sm text-gray-400 font-medium">+ Add account</Text>
+            {saveError && <Text className="text-danger text-xs mt-3 text-center">{saveError}</Text>}
           </Pressable>
-        )}
-      </View>
+        </Pressable>
+      </Modal>
     </View>
   )
 }
@@ -286,9 +416,9 @@ function DayPicker({ value, onChange }: { value: number | null; onChange: (d: nu
         <Pressable
           key={d}
           onPress={() => onChange(d)}
-          className={`w-7 h-7 rounded items-center justify-center ${value === d ? "bg-primary" : "bg-white border border-gray-200 hover:bg-gray-100"}`}
+          className={`w-8 h-8 rounded-lg items-center justify-center ${value === d ? "bg-primary" : "bg-gray-50 border border-gray-200 hover:bg-gray-100"}`}
         >
-          <Text className={`text-xs font-medium ${value === d ? "text-white" : "text-gray-700"}`}>{d}</Text>
+          <Text className={`text-xs font-semibold ${value === d ? "text-white" : "text-gray-600"}`}>{d}</Text>
         </Pressable>
       ))}
     </View>
@@ -362,7 +492,8 @@ function CreditCardsSection() {
   const { session } = useAuth()
   const [cards, setCards] = useState<CreditCardRow[]>([])
   const [accounts, setAccounts] = useState<{ id: string; name: string; icon: string }[]>([])
-  const [adding, setAdding] = useState(false)
+  const [modalVisible, setModalVisible] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [newName, setNewName] = useState("")
   const [newIcon, setNewIcon] = useState("💳")
   const [newLimit, setNewLimit] = useState("")
@@ -370,6 +501,7 @@ function CreditCardsSection() {
   const [newDueDay, setNewDueDay] = useState<number | null>(null)
   const [newAccountId, setNewAccountId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!session?.user) return
@@ -388,28 +520,45 @@ function CreditCardsSection() {
       .then(({ data }) => setAccounts(data ?? []))
   }, [session])
 
-  async function handleAdd() {
-    if (!newName.trim() || !newClosingDay || !newDueDay || !session?.user) return
-    const limitVal = parseFloat(newLimit.replace(",", "."))
-    if (isNaN(limitVal) || limitVal <= 0) return
+  function handleOpenEdit(card: CreditCardRow) {
+    setEditingId(card.id)
+    setNewName(card.name)
+    setNewIcon(card.icon)
+    setNewLimit(card.creditLimit ? String(card.creditLimit) : "")
+    setNewClosingDay(card.closingDay)
+    setNewDueDay(card.dueDay)
+    setNewAccountId(card.defaultAccountId)
+    setModalVisible(true)
+  }
+
+  async function handleSave() {
+    if (!newName.trim()) { setSaveError("Name is required."); return }
+    if (!newClosingDay) { setSaveError("Closing day is required."); return }
+    if (!newDueDay) { setSaveError("Due day is required."); return }
+    if (!session?.user) return
+    const limitVal = newLimit.trim() ? parseFloat(newLimit.replace(",", ".")) : null
+    if (limitVal !== null && (isNaN(limitVal) || limitVal <= 0)) { setSaveError("Credit limit must be a positive number."); return }
+    setSaveError(null)
     setSaving(true)
-    const { data } = await supabase
-      .from("CreditCard")
-      .insert({
-        userId: session.user.id,
-        name: newName.trim(),
-        icon: newIcon,
-        creditLimit: limitVal,
-        closingDay: newClosingDay,
-        dueDay: newDueDay,
-        defaultAccountId: newAccountId,
-      })
-      .select("id, name, icon, creditLimit, closingDay, dueDay, defaultAccountId")
-      .single()
-    if (data) {
-      setCards((prev) => [...prev, data])
-      handleCancel()
+    if (editingId) {
+      const { error } = await supabase
+        .from("CreditCard")
+        .update({ name: newName.trim(), icon: newIcon, creditLimit: limitVal, closingDay: newClosingDay, dueDay: newDueDay, defaultAccountId: newAccountId })
+        .eq("id", editingId)
+      if (error) { setSaveError(error.message); setSaving(false); return }
+    } else {
+      const { error } = await supabase
+        .from("CreditCard")
+        .insert({ userId: session.user.id, name: newName.trim(), icon: newIcon, creditLimit: limitVal, closingDay: newClosingDay, dueDay: newDueDay, defaultAccountId: newAccountId })
+      if (error) { setSaveError(error.message); setSaving(false); return }
     }
+    const { data: refreshed } = await supabase
+      .from("CreditCard")
+      .select("id, name, icon, creditLimit, closingDay, dueDay, defaultAccountId")
+      .eq("userId", session.user.id)
+      .order("createdAt")
+    setCards(refreshed ?? [])
+    handleCancel()
     setSaving(false)
   }
 
@@ -419,19 +568,20 @@ function CreditCardsSection() {
   }
 
   function handleCancel() {
-    setAdding(false)
+    setModalVisible(false)
+    setEditingId(null)
     setNewName("")
     setNewIcon("💳")
     setNewLimit("")
     setNewClosingDay(null)
     setNewDueDay(null)
     setNewAccountId(null)
+    setSaveError(null)
   }
 
   return (
     <View>
-      <Text className="text-lg font-bold text-gray-900 mb-1">Credit Cards</Text>
-      <Text className="text-sm text-gray-500 mb-6">Manage your credit cards</Text>
+      <Text className="text-sm font-bold text-gray-700 mb-4">Credit Cards</Text>
 
       <View className="w-[50%]">
         {cards.length > 0 && (
@@ -456,6 +606,9 @@ function CreditCardsSection() {
                   <Text className="text-sm font-semibold text-gray-500 mr-3">
                     {Number(card.creditLimit).toLocaleString()}
                   </Text>
+                  <Pressable onPress={() => handleOpenEdit(card)} className="hover:opacity-70 mr-3">
+                    <Text className="text-gray-400 text-sm">✎</Text>
+                  </Pressable>
                   <Pressable onPress={() => handleDelete(card.id)} className="hover:opacity-70">
                     <Text className="text-danger text-sm">✕</Text>
                   </Pressable>
@@ -465,56 +618,74 @@ function CreditCardsSection() {
           </View>
         )}
 
-        {adding ? (
-          <View className="bg-gray-50 rounded-xl p-4 gap-4">
-            {/* Icon */}
-            <View>
-              <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">Icon</Text>
-              <CardIconPicker value={newIcon} onChange={setNewIcon} />
-            </View>
+        <Pressable
+          onPress={() => setModalVisible(true)}
+          className="border border-dashed border-gray-300 rounded-xl py-3 items-center hover:bg-gray-50"
+        >
+          <Text className="text-sm text-gray-400 font-medium">+ Add card</Text>
+        </Pressable>
+      </View>
 
-            {/* Name */}
-            <View>
-              <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">Name</Text>
-              <TextInput
-                value={newName}
-                onChangeText={setNewName}
-                placeholder="e.g. Nubank Gold"
-                className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800"
-              />
-            </View>
+      <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={handleCancel}>
+        <Pressable className="flex-1 bg-black/40 items-center justify-center" onPress={handleCancel}>
+          <Pressable className="bg-white rounded-2xl max-h-[90%]" style={{ width: 540 }} onPress={() => {}}>
+            <ScrollView contentContainerStyle={{ padding: 28 }} showsVerticalScrollIndicator={false}>
+              <Text className="text-base font-bold text-gray-900 mb-5">{editingId ? "Edit Credit Card" : "Add Credit Card"}</Text>
 
-            {/* Credit limit */}
-            <View>
-              <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">Credit limit</Text>
-              <TextInput
-                value={newLimit}
-                onChangeText={setNewLimit}
-                placeholder="5000"
-                keyboardType="decimal-pad"
-                className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800"
-              />
-            </View>
+              {/* Icon + Name row */}
+              <View className="flex-row gap-4 mb-5">
+                <View className="flex-1">
+                  <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">Icon</Text>
+                  <CardIconPicker value={newIcon} onChange={setNewIcon} />
+                </View>
+              </View>
 
-            {/* Closing day */}
-            <View>
-              <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">Closing day</Text>
-              <DayPicker value={newClosingDay} onChange={setNewClosingDay} />
-            </View>
+              {/* Name + Limit row */}
+              <View className="flex-row gap-4 mb-5">
+                <View className="flex-1">
+                  <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">Name <Text className="text-danger">*</Text></Text>
+                  <TextInput
+                    value={newName}
+                    onChangeText={setNewName}
+                    placeholder="e.g. Nubank Gold"
+                    autoFocus
+                    className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800"
+                  />
+                </View>
+                <View style={{ width: 140 }}>
+                  <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">Credit limit</Text>
+                  <TextInput
+                    value={newLimit}
+                    onChangeText={setNewLimit}
+                    placeholder="5000"
+                    keyboardType="decimal-pad"
+                    className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800"
+                  />
+                </View>
+              </View>
 
-            {/* Due day */}
-            <View>
-              <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">Due day</Text>
-              <DayPicker value={newDueDay} onChange={setNewDueDay} />
-            </View>
+              {/* Closing day + Due day side by side */}
+              <View className="flex-row gap-4 mb-5">
+                <View className="flex-1">
+                  <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">
+                    Closing day <Text className="text-danger">*</Text>{newClosingDay ? <Text className="text-primary normal-case font-bold"> · {newClosingDay}</Text> : null}
+                  </Text>
+                  <DayPicker value={newClosingDay} onChange={setNewClosingDay} />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">
+                    Due day <Text className="text-danger">*</Text>{newDueDay ? <Text className="text-primary normal-case font-bold"> · {newDueDay}</Text> : null}
+                  </Text>
+                  <DayPicker value={newDueDay} onChange={setNewDueDay} />
+                </View>
+              </View>
 
-            {/* Default account */}
-            <View>
+              {/* Default account */}
               <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">Default payment account</Text>
               {accounts.length === 0 ? (
-                <Text className="text-xs text-gray-400">No accounts yet. Add one in Accounts.</Text>
+                <Text className="text-xs text-gray-400 mb-5">No accounts yet. Add one in Accounts.</Text>
               ) : (
-                <View className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                <View className="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden mb-6">
                   <Pressable
                     onPress={() => setNewAccountId(null)}
                     className={`px-3 py-2 ${!newAccountId ? "bg-primary/10" : "hover:bg-gray-50"}`}
@@ -538,46 +709,221 @@ function CreditCardsSection() {
                   ))}
                 </View>
               )}
-            </View>
 
-            {/* Buttons */}
-            <View className="flex-row gap-2">
-              <TouchableOpacity
-                onPress={handleAdd}
-                disabled={!newName.trim() || !newClosingDay || !newDueDay || saving}
-                className="flex-1 bg-primary rounded-lg py-2 items-center"
-              >
-                <Text className="text-white text-sm font-semibold">{saving ? "Saving..." : "Add"}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleCancel} className="flex-1 bg-gray-200 rounded-lg py-2 items-center">
-                <Text className="text-gray-700 text-sm font-semibold">Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : (
-          <Pressable
-            onPress={() => setAdding(true)}
-            className="border border-dashed border-gray-300 rounded-xl py-3 items-center hover:bg-gray-50"
-          >
-            <Text className="text-sm text-gray-400 font-medium">+ Add card</Text>
+              {/* Buttons */}
+              <View className="flex-row gap-2">
+                <TouchableOpacity
+                  onPress={handleSave}
+                  disabled={saving}
+                  className="flex-1 bg-primary rounded-lg py-2.5 items-center"
+                >
+                  <Text className="text-white text-sm font-semibold">{saving ? "Saving..." : editingId ? "Save" : "Add"}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleCancel} className="flex-1 bg-gray-100 rounded-lg py-2.5 items-center">
+                  <Text className="text-gray-700 text-sm font-semibold">Cancel</Text>
+                </TouchableOpacity>
+              </View>
+              {saveError && (
+                <Text className="text-danger text-xs mt-3 text-center">{saveError}</Text>
+              )}
+            </ScrollView>
           </Pressable>
-        )}
-      </View>
+        </Pressable>
+      </Modal>
     </View>
   )
 }
 
 // ─── Categories ──────────────────────────────────────────────────────────────
 
+const CATEGORY_ICONS = ["🛒", "🍔", "🍕", "☕", "🚗", "✈️", "🏥", "📚", "🎮", "👗", "💊", "🔧", "🏠", "💡", "📱", "🎬", "🎵", "🐾", "🏋️", "💰", "💵", "📈", "💼", "🎁", "⭐", "🎯", "🏦", "💎", "🌍", "📂"]
+
+const CATEGORY_COLORS = [
+  "#6366f1", "#8b5cf6", "#ec4899", "#ef4444",
+  "#f97316", "#eab308", "#22c55e", "#14b8a6",
+  "#3b82f6", "#06b6d4", "#64748b", "#1f2937",
+]
+
+type CategoryRow = { id: string; name: string; icon: string; color: string; type: string }
+
 function CategoriesSection() {
+  const { session } = useAuth()
+  const [tab, setTab] = useState<"expense" | "income">("expense")
+  const [categories, setCategories] = useState<CategoryRow[]>([])
+  const [modalVisible, setModalVisible] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [newName, setNewName] = useState("")
+  const [newIcon, setNewIcon] = useState("📂")
+  const [newColor, setNewColor] = useState(CATEGORY_COLORS[0])
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!session?.user) return
+    supabase
+      .from("Category")
+      .select("id, name, icon, color, type")
+      .eq("userId", session.user.id)
+      .order("createdAt")
+      .then(({ data }) => setCategories(data ?? []))
+  }, [session])
+
+  const filtered = categories.filter((c) => c.type === tab)
+
+  function handleOpenEdit(cat: CategoryRow) {
+    setEditingId(cat.id)
+    setNewName(cat.name)
+    setNewIcon(cat.icon)
+    setNewColor(cat.color)
+    setModalVisible(true)
+  }
+
+  async function handleSave() {
+    if (!newName.trim()) { setSaveError("Name is required."); return }
+    if (!session?.user) return
+    setSaveError(null)
+    setSaving(true)
+    if (editingId) {
+      const { error } = await supabase
+        .from("Category")
+        .update({ name: newName.trim(), icon: newIcon, color: newColor })
+        .eq("id", editingId)
+      if (error) { setSaveError(error.message); setSaving(false); return }
+    } else {
+      const { error } = await supabase
+        .from("Category")
+        .insert({ userId: session.user.id, name: newName.trim(), icon: newIcon, color: newColor, type: tab })
+      if (error) { setSaveError(error.message); setSaving(false); return }
+    }
+    const { data: refreshed } = await supabase
+      .from("Category")
+      .select("id, name, icon, color, type")
+      .eq("userId", session.user.id)
+      .order("createdAt")
+    setCategories(refreshed ?? [])
+    handleCancel()
+    setSaving(false)
+  }
+
+  async function handleDelete(id: string) {
+    await supabase.from("Category").delete().eq("id", id)
+    setCategories((prev) => prev.filter((c) => c.id !== id))
+  }
+
+  function handleCancel() {
+    setModalVisible(false)
+    setEditingId(null)
+    setNewName("")
+    setNewIcon("📂")
+    setNewColor(CATEGORY_COLORS[0])
+    setSaveError(null)
+  }
+
   return (
     <View>
       <Text className="text-lg font-bold text-gray-900 mb-1">Categories</Text>
       <Text className="text-sm text-gray-500 mb-6">Manage your income and expense categories</Text>
-      <View className="bg-gray-50 rounded-xl p-4">
-        <Text className="text-xs text-gray-400 uppercase font-semibold mb-1">Coming soon</Text>
-        <Text className="text-sm text-gray-600">Category management will be available here.</Text>
+
+      {/* Tabs */}
+      <View className="flex-row gap-2 mb-4">
+        {(["expense", "income"] as const).map((t) => (
+          <Pressable
+            key={t}
+            onPress={() => setTab(t)}
+            className={`px-4 py-1.5 rounded-full ${tab === t ? "bg-primary" : "bg-gray-100 hover:bg-gray-200"}`}
+          >
+            <Text className={`text-sm font-medium capitalize ${tab === t ? "text-white" : "text-gray-600"}`}>{t}</Text>
+          </Pressable>
+        ))}
       </View>
+
+      <View className="w-[50%]">
+        {filtered.length > 0 && (
+          <View className="bg-gray-50 rounded-xl overflow-hidden mb-3">
+            {filtered.map((cat, i) => (
+              <View key={cat.id} className={`flex-row items-center px-4 py-3 ${i > 0 ? "border-t border-gray-100" : ""}`}>
+                <View className="w-7 h-7 rounded-lg items-center justify-center mr-3" style={{ backgroundColor: cat.color + "22" }}>
+                  <Text className="text-base">{cat.icon}</Text>
+                </View>
+                <View className="w-2 h-2 rounded-full mr-3" style={{ backgroundColor: cat.color }} />
+                <Text className="flex-1 text-sm font-medium text-gray-800">{cat.name}</Text>
+                <Pressable onPress={() => handleOpenEdit(cat)} className="hover:opacity-70 mr-3">
+                  <Text className="text-gray-400 text-sm">✎</Text>
+                </Pressable>
+                <Pressable onPress={() => handleDelete(cat.id)} className="hover:opacity-70">
+                  <Text className="text-danger text-sm">✕</Text>
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        )}
+
+        <Pressable
+          onPress={() => setModalVisible(true)}
+          className="border border-dashed border-gray-300 rounded-xl py-3 items-center hover:bg-gray-50"
+        >
+          <Text className="text-sm text-gray-400 font-medium">+ Add category</Text>
+        </Pressable>
+      </View>
+
+      <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={handleCancel}>
+        <Pressable className="flex-1 bg-black/40 items-center justify-center" onPress={handleCancel}>
+          <Pressable className="bg-white rounded-2xl p-6" style={{ width: 440 }} onPress={() => {}}>
+            <Text className="text-base font-bold text-gray-900 mb-5">
+              {editingId ? "Edit" : "Add"} {tab === "expense" ? "Expense" : "Income"} Category
+            </Text>
+
+            {/* Icon */}
+            <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">Icon</Text>
+            <View className="flex-row flex-wrap gap-2 mb-5">
+              {CATEGORY_ICONS.map((icon) => (
+                <TouchableOpacity
+                  key={icon}
+                  onPress={() => setNewIcon(icon)}
+                  className={`w-9 h-9 rounded-lg items-center justify-center ${newIcon === icon ? "bg-primary/15 border border-primary" : "bg-gray-50 border border-gray-200"}`}
+                >
+                  <Text className="text-lg">{icon}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Color */}
+            <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">Color</Text>
+            <View className="flex-row flex-wrap gap-2 mb-5">
+              {CATEGORY_COLORS.map((color) => (
+                <TouchableOpacity
+                  key={color}
+                  onPress={() => setNewColor(color)}
+                  style={{ backgroundColor: color }}
+                  className={`w-7 h-7 rounded-full items-center justify-center ${newColor === color ? "border-2 border-gray-800" : ""}`}
+                >
+                  {newColor === color && <Text className="text-white text-xs font-bold">✓</Text>}
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Name */}
+            <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">Name <Text className="text-danger">*</Text></Text>
+            <TextInput
+              value={newName}
+              onChangeText={setNewName}
+              placeholder="e.g. Groceries"
+              autoFocus
+              className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 mb-5"
+            />
+
+            <View className="flex-row gap-2">
+              <TouchableOpacity onPress={handleSave} disabled={saving} className="flex-1 bg-primary rounded-lg py-2.5 items-center">
+                <Text className="text-white text-sm font-semibold">{saving ? "Saving..." : editingId ? "Save" : "Add"}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleCancel} className="flex-1 bg-gray-100 rounded-lg py-2.5 items-center">
+                <Text className="text-gray-700 text-sm font-semibold">Cancel</Text>
+              </TouchableOpacity>
+            </View>
+            {saveError && <Text className="text-danger text-xs mt-3 text-center">{saveError}</Text>}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   )
 }
@@ -599,11 +945,23 @@ function AccountSection() {
 
 // ─── Layout ──────────────────────────────────────────────────────────────────
 
+function FinancesSection() {
+  return (
+    <View>
+      <Text className="text-lg font-bold text-gray-900 mb-1">Finances</Text>
+      <Text className="text-sm text-gray-500 mb-6">Currency, accounts and credit cards</Text>
+      <CurrencySection />
+      <View className="h-px bg-gray-100 my-6" />
+      <AccountsSection />
+      <View className="h-px bg-gray-100 my-6" />
+      <CreditCardsSection />
+    </View>
+  )
+}
+
 const SECTION_CONTENT: Record<Section, React.ReactNode> = {
   profile: <ProfileSection />,
-  currency: <CurrencySection />,
-  accounts: <AccountsSection />,
-  cards: <CreditCardsSection />,
+  finances: <FinancesSection />,
   categories: <CategoriesSection />,
   account: <AccountSection />,
 }
