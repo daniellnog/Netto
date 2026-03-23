@@ -18,7 +18,7 @@ function RootLayoutNav() {
     } else if (session && inAuthGroup) {
       router.replace("/(app)")
     }
-  }, [session, loading, segments])
+  }, [session, loading, segments, router])
 
   return <Stack screenOptions={{ headerShown: false }} />
 }
