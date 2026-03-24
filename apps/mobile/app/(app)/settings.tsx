@@ -4,21 +4,22 @@ import { useProfile } from "../../hooks/useProfile"
 import { useAuth } from "../../context/auth"
 import { supabase } from "../../lib/supabase"
 
-type Section = "profile" | "finances" | "categories" | "account"
+type Section = "account" | "finances" | "categories"
 
 const SECTIONS: { id: Section; label: string; description: string }[] = [
-  { id: "profile", label: "Profile", description: "Your personal information" },
+  { id: "account", label: "Account", description: "Personal info & account" },
   { id: "finances", label: "Finances", description: "Currency, accounts & cards" },
   { id: "categories", label: "Categories", description: "Manage categories" },
-  { id: "account", label: "Account", description: "Account actions" },
 ]
 
-// ─── Profile ────────────────────────────────────────────────────────────────
+// ─── Account ────────────────────────────────────────────────────────────────
 
-function ProfileSection() {
+function AccountSection() {
   const { profile, updateAvatar } = useProfile()
   const { session } = useAuth()
   const [uploading, setUploading] = useState(false)
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const meta = session?.user?.user_metadata
   const avatarUrl = profile?.avatarUrl ?? meta?.avatar_url ?? meta?.picture ?? null
@@ -46,10 +47,21 @@ function ProfileSection() {
     input.click()
   }
 
+  async function handleDeleteAccount() {
+    setDeleting(true)
+    try {
+      await supabase.rpc("delete_user")
+      await supabase.auth.signOut()
+    } finally {
+      setDeleting(false)
+      setDeleteModalVisible(false)
+    }
+  }
+
   return (
     <View>
-      <Text className="text-lg font-bold text-gray-900 mb-1">Profile</Text>
-      <Text className="text-sm text-gray-500 mb-6">Your personal information</Text>
+      <Text className="text-lg font-bold text-gray-900 mb-1">Account</Text>
+      <Text className="text-sm text-gray-500 mb-6">Personal info & account</Text>
 
       <View className="flex-row items-center gap-4 mb-6">
         {/* @ts-ignore – onClick/cursor valid on web */}
@@ -81,6 +93,41 @@ function ProfileSection() {
           <Text className="text-sm text-gray-500 mt-0.5">{email ?? "—"}</Text>
         </View>
       </View>
+
+      <View className="h-px bg-gray-100 my-6" />
+
+      <Text className="text-base font-semibold text-gray-900 mb-4">Danger zone</Text>
+      <TouchableOpacity
+        onPress={() => setDeleteModalVisible(true)}
+        className="bg-red-50 border border-red-200 rounded-xl px-4 py-3"
+      >
+        <Text className="text-sm font-semibold text-red-600">Delete account</Text>
+        <Text className="text-xs text-red-400 mt-0.5">Permanently delete your account and all data</Text>
+      </TouchableOpacity>
+
+      <Modal visible={deleteModalVisible} transparent animationType="fade">
+        <View className="flex-1 items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.4)" }}>
+          <View className="bg-white rounded-2xl p-6 w-80">
+            <Text className="text-lg font-bold text-gray-900 mb-2">Delete account?</Text>
+            <Text className="text-sm text-gray-500 mb-6">This action is irreversible. All your data will be permanently deleted.</Text>
+            <View className="flex-row gap-3">
+              <TouchableOpacity
+                onPress={() => setDeleteModalVisible(false)}
+                className="flex-1 bg-gray-100 rounded-xl py-3 items-center"
+              >
+                <Text className="text-sm font-semibold text-gray-700">Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleDeleteAccount}
+                disabled={deleting}
+                className="flex-1 bg-red-500 rounded-xl py-3 items-center"
+              >
+                <Text className="text-sm font-semibold text-white">{deleting ? "Deleting..." : "Delete"}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   )
 }
@@ -928,21 +975,6 @@ function CategoriesSection() {
   )
 }
 
-// ─── Account ─────────────────────────────────────────────────────────────────
-
-function AccountSection() {
-  return (
-    <View>
-      <Text className="text-lg font-bold text-gray-900 mb-1">Account</Text>
-      <Text className="text-sm text-gray-500 mb-6">Manage your account</Text>
-      <View className="bg-gray-50 rounded-xl p-4">
-        <Text className="text-xs text-gray-400 uppercase font-semibold mb-1">Delete account</Text>
-        <Text className="text-sm text-gray-600">Will be available here.</Text>
-      </View>
-    </View>
-  )
-}
-
 // ─── Layout ──────────────────────────────────────────────────────────────────
 
 function FinancesSection() {
@@ -960,14 +992,13 @@ function FinancesSection() {
 }
 
 const SECTION_CONTENT: Record<Section, React.ReactNode> = {
-  profile: <ProfileSection />,
+  account: <AccountSection />,
   finances: <FinancesSection />,
   categories: <CategoriesSection />,
-  account: <AccountSection />,
 }
 
 export default function SettingsScreen() {
-  const [active, setActive] = useState<Section>("profile")
+  const [active, setActive] = useState<Section>("account")
 
   return (
     <View className="flex-1 flex-row gap-6">
