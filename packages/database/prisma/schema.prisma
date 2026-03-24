@@ -29,6 +29,7 @@ model Account {
   userId           String
   name             String
   icon             String   @default("💳")
+  balance          Decimal  @default(0) @db.Decimal(12, 2)
   excludeFromTotal Boolean  @default(false)
   createdAt        DateTime @default(now())
 

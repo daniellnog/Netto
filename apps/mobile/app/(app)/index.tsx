@@ -5,6 +5,14 @@ import { useProfile } from "../../hooks/useProfile"
 import { useLocale } from "../../context/locale"
 import { supabase } from "../../lib/supabase"
 
+type Account = {
+  id: string
+  name: string
+  icon: string
+  balance: number
+  excludeFromTotal: boolean
+}
+
 type Transaction = {
   id: string
   type: "income" | "expense"
@@ -41,6 +49,7 @@ export default function OverviewScreen() {
   const { profile } = useProfile()
   const { t } = useLocale()
 
+  const [accounts, setAccounts] = useState<Account[]>([])
   const [income, setIncome] = useState(0)
   const [expenses, setExpenses] = useState(0)
   const [recentTxs, setRecentTxs] = useState<Transaction[]>([])
@@ -53,6 +62,14 @@ export default function OverviewScreen() {
     if (!session?.user) return
     const uid = session.user.id
     const { from, to } = monthRange()
+
+    // Accounts
+    supabase
+      .from("Account")
+      .select("id, name, icon, balance, excludeFromTotal")
+      .eq("userId", uid)
+      .order("createdAt")
+      .then(({ data }) => setAccounts((data ?? []) as Account[]))
 
     // Month transactions
     supabase
@@ -113,6 +130,44 @@ export default function OverviewScreen() {
           <Text className="text-2xl font-bold text-gray-900">{t.overview.greeting(name)}</Text>
         ) : null}
         <Text className="text-sm text-gray-400 mt-0.5 capitalize">{monthLabel}</Text>
+      </View>
+
+      {/* Accounts */}
+      <Text className="text-xs font-semibold text-gray-400 uppercase mb-3">{t.overview.accounts}</Text>
+      <View className="bg-surface rounded-2xl overflow-hidden mb-8">
+        {accounts.length === 0 ? (
+          <View className="px-4 py-6 items-center">
+            <Text className="text-sm text-gray-400">{t.overview.noAccounts}</Text>
+          </View>
+        ) : (
+          <>
+            {accounts.map((acc, i) => (
+              <View key={acc.id} className={`flex-row items-center px-4 py-3 ${i > 0 ? "border-t border-gray-100" : ""}`}>
+                <Text className="text-xl w-8">{acc.icon}</Text>
+                <Text className="flex-1 text-sm font-medium text-gray-800 ml-3">{acc.name}</Text>
+                {acc.excludeFromTotal && (
+                  <Text className="text-xs text-amber-500 mr-3">—</Text>
+                )}
+                <Text className={`text-sm font-semibold ${Number(acc.balance) < 0 ? "text-red-500" : "text-gray-800"}`}>
+                  {fmt(Number(acc.balance), currency)}
+                </Text>
+              </View>
+            ))}
+            {(() => {
+              const total = accounts
+                .filter((a) => !a.excludeFromTotal)
+                .reduce((s, a) => s + Number(a.balance), 0)
+              return (
+                <View className="flex-row items-center px-4 py-3 border-t border-gray-200 bg-gray-50">
+                  <Text className="flex-1 text-sm font-bold text-gray-700">{t.overview.totalBalance}</Text>
+                  <Text className={`text-sm font-bold ${total < 0 ? "text-red-500" : "text-gray-900"}`}>
+                    {fmt(total, currency)}
+                  </Text>
+                </View>
+              )
+            })()}
+          </>
+        )}
       </View>
 
       {/* Month summary */}

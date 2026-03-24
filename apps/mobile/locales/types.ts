@@ -87,6 +87,9 @@ export type Dictionary = {
       editTitle: string
       addTitle: string
       namePlaceholder: string
+      balance: string
+      balancePlaceholder: string
+      balanceError: string
       excludeFromTotal: string
       excludeShort: string
     }
@@ -126,6 +129,9 @@ export type Dictionary = {
   }
   overview: {
     greeting: (name: string) => string
+    accounts: string
+    noAccounts: string
+    totalBalance: string
     thisMonth: string
     income: string
     expenses: string

@@ -255,6 +255,7 @@ type AccountRow = {
   id: string
   name: string
   icon: string
+  balance: number
   excludeFromTotal: boolean
 }
 
@@ -266,6 +267,7 @@ function AccountsSection() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [newName, setNewName] = useState("")
   const [newIcon, setNewIcon] = useState("💳")
+  const [newBalance, setNewBalance] = useState("")
   const [newExclude, setNewExclude] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -274,7 +276,7 @@ function AccountsSection() {
     if (!session?.user) return
     supabase
       .from("Account")
-      .select("id, name, icon, excludeFromTotal")
+      .select("id, name, icon, balance, excludeFromTotal")
       .eq("userId", session.user.id)
       .order("createdAt")
       .then(({ data }) => setAccounts(data ?? []))
@@ -284,6 +286,7 @@ function AccountsSection() {
     setEditingId(account.id)
     setNewName(account.name)
     setNewIcon(account.icon)
+    setNewBalance(account.balance ? String(account.balance) : "")
     setNewExclude(account.excludeFromTotal)
     setModalVisible(true)
   }
@@ -291,20 +294,22 @@ function AccountsSection() {
   async function handleSave() {
     if (!newName.trim()) { setSaveError(t.common.errorNameRequired); return }
     if (!session?.user) return
+    const balanceVal = newBalance.trim() ? parseFloat(newBalance.replace(",", ".")) : 0
+    if (isNaN(balanceVal)) { setSaveError(t.settings.accounts.balanceError); return }
     setSaveError(null)
     setSaving(true)
     if (editingId) {
       const { error } = await supabase
         .from("Account")
-        .update({ name: newName.trim(), icon: newIcon, excludeFromTotal: newExclude })
+        .update({ name: newName.trim(), icon: newIcon, balance: balanceVal, excludeFromTotal: newExclude })
         .eq("id", editingId)
       if (error) { setSaveError(error.message); setSaving(false); return }
-      setAccounts((prev) => prev.map((a) => a.id === editingId ? { ...a, name: newName.trim(), icon: newIcon, excludeFromTotal: newExclude } : a))
+      setAccounts((prev) => prev.map((a) => a.id === editingId ? { ...a, name: newName.trim(), icon: newIcon, balance: balanceVal, excludeFromTotal: newExclude } : a))
     } else {
       const { data } = await supabase
         .from("Account")
-        .insert({ userId: session.user.id, name: newName.trim(), icon: newIcon, excludeFromTotal: newExclude })
-        .select("id, name, icon, excludeFromTotal")
+        .insert({ userId: session.user.id, name: newName.trim(), icon: newIcon, balance: balanceVal, excludeFromTotal: newExclude })
+        .select("id, name, icon, balance, excludeFromTotal")
         .single()
       if (data) setAccounts((prev) => [...prev, data])
     }
@@ -327,6 +332,7 @@ function AccountsSection() {
     setEditingId(null)
     setNewName("")
     setNewIcon("💳")
+    setNewBalance("")
     setNewExclude(false)
     setSaveError(null)
   }
@@ -345,6 +351,9 @@ function AccountsSection() {
               >
                 <Text className="text-xl w-8">{account.icon}</Text>
                 <Text className="flex-1 text-sm font-medium text-gray-800 mx-3">{account.name}</Text>
+                <Text className="text-sm font-semibold text-gray-600 mr-3">
+                  {Number(account.balance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </Text>
                 <Pressable
                   onPress={() => handleToggleExclude(account.id, account.excludeFromTotal)}
                   className={`px-2 py-1 rounded-md mr-3 ${account.excludeFromTotal ? "bg-amber-100" : "bg-gray-200"}`}
@@ -390,14 +399,28 @@ function AccountsSection() {
               ))}
             </View>
 
-            <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">{t.common.name} <Text className="text-danger">*</Text></Text>
-            <TextInput
-              value={newName}
-              onChangeText={setNewName}
-              placeholder={t.settings.accounts.namePlaceholder}
-              autoFocus
-              className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 mb-4"
-            />
+            <View className="flex-row gap-4 mb-4">
+              <View className="flex-1">
+                <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">{t.common.name} <Text className="text-danger">*</Text></Text>
+                <TextInput
+                  value={newName}
+                  onChangeText={setNewName}
+                  placeholder={t.settings.accounts.namePlaceholder}
+                  autoFocus
+                  className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800"
+                />
+              </View>
+              <View style={{ width: 140 }}>
+                <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">{t.settings.accounts.balance}</Text>
+                <TextInput
+                  value={newBalance}
+                  onChangeText={setNewBalance}
+                  placeholder={t.settings.accounts.balancePlaceholder}
+                  keyboardType="decimal-pad"
+                  className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800"
+                />
+              </View>
+            </View>
 
             <Pressable onPress={() => setNewExclude((v) => !v)} className="flex-row items-center gap-3 mb-6">
               <View className={`w-5 h-5 rounded border-2 items-center justify-center ${newExclude ? "bg-primary border-primary" : "border-gray-300 bg-white"}`}>
