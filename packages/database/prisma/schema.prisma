@@ -14,6 +14,7 @@ model User {
   email     String   @unique
   avatarUrl String?
   currency  String   @default("EUR")
+  language  String   @default("en")
   createdAt DateTime @default(now())
 
   transactions   Transaction[]

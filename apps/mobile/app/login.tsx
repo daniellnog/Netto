@@ -11,10 +11,12 @@ import {
   Animated,
 } from "react-native"
 import { supabase } from "../lib/supabase"
+import { useLocale } from "../context/locale"
 
 type Face = "login" | "register" | "forgot"
 
 export default function AuthScreen() {
+  const { t } = useLocale()
   const [face, setFace] = useState<Face>("login")
   const flipAnim = useRef(new Animated.Value(0)).current
 
@@ -59,7 +61,7 @@ export default function AuthScreen() {
   }
 
   async function handleLogin() {
-    if (!loginEmail || !loginPassword) { setLoginError("Please fill in all fields."); return }
+    if (!loginEmail || !loginPassword) { setLoginError(t.login.errorFillAll); return }
     setLoginLoading(true); setLoginError(null)
     const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password: loginPassword })
     if (error) setLoginError(error.message)
@@ -75,7 +77,7 @@ export default function AuthScreen() {
   }
 
   async function handleForgotPassword() {
-    if (!forgotEmail) { setForgotError("Please enter your email."); return }
+    if (!forgotEmail) { setForgotError(t.login.errorFillAll); return }
     setForgotLoading(true); setForgotError(null)
     const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail)
     if (error) { setForgotError(error.message); setForgotLoading(false); return }
@@ -83,9 +85,9 @@ export default function AuthScreen() {
   }
 
   async function handleRegister() {
-    if (!regName || !regEmail || !regPassword || !regConfirm) { setRegError("Please fill in all fields."); return }
-    if (regPassword !== regConfirm) { setRegError("Passwords do not match."); return }
-    if (regPassword.length < 6) { setRegError("Password must be at least 6 characters."); return }
+    if (!regName || !regEmail || !regPassword || !regConfirm) { setRegError(t.login.errorFillAll); return }
+    if (regPassword !== regConfirm) { setRegError(t.login.errorPasswordsMismatch); return }
+    if (regPassword.length < 6) { setRegError(t.login.errorPasswordTooShort); return }
     setRegLoading(true); setRegError(null)
     const { error } = await supabase.auth.signUp({
       email: regEmail,
@@ -108,8 +110,8 @@ export default function AuthScreen() {
           {face === "login" ? (
             <>
               <Text className="text-3xl font-bold text-gray-900 text-center mb-1">Netto</Text>
-              <Text className="text-xs text-muted text-center mb-2">net income · rendimento líquido</Text>
-              <Text className="text-sm text-gray-500 text-center mb-6">Sign in to your account</Text>
+              <Text className="text-xs text-muted text-center mb-2">{t.login.tagline}</Text>
+              <Text className="text-sm text-gray-500 text-center mb-6">{t.login.signInSubtitle}</Text>
 
               {loginError && <Text className="text-danger text-xs text-center mb-3">{loginError}</Text>}
 
@@ -118,21 +120,21 @@ export default function AuthScreen() {
                 onPress={handleGoogleLogin}
               >
                 <Text className="text-base font-bold text-blue-500">G</Text>
-                <Text className="text-sm font-semibold text-gray-900">Continue with Google</Text>
+                <Text className="text-sm font-semibold text-gray-900">{t.login.continueWithGoogle}</Text>
               </TouchableOpacity>
 
               <View className="flex-row items-center mb-5">
                 <View className="flex-1 h-px bg-gray-200" />
-                <Text className="mx-3 text-xs text-muted">or</Text>
+                <Text className="mx-3 text-xs text-muted">{t.common.or}</Text>
                 <View className="flex-1 h-px bg-gray-200" />
               </View>
 
               <Text className="text-sm font-semibold text-gray-700 mb-1.5">
-                Email <Text className="text-danger">*</Text>
+                {t.login.emailLabel} <Text className="text-danger">*</Text>
               </Text>
               <TextInput
                 className="border border-gray-200 rounded-xl p-3 text-sm text-gray-900 bg-gray-50 mb-4"
-                placeholder="Enter your email"
+                placeholder={t.login.emailPlaceholder}
                 placeholderTextColor="#9ca3af"
                 autoCapitalize="none"
                 keyboardType="email-address"
@@ -141,12 +143,12 @@ export default function AuthScreen() {
               />
 
               <Text className="text-sm font-semibold text-gray-700 mb-1.5">
-                Password <Text className="text-danger">*</Text>
+                {t.login.passwordLabel} <Text className="text-danger">*</Text>
               </Text>
               <View className="flex-row items-center border border-gray-200 rounded-xl bg-gray-50 mb-2">
                 <TextInput
                   className="flex-1 p-3 text-sm text-gray-900"
-                  placeholder="Enter your password"
+                  placeholder={t.login.passwordPlaceholder}
                   placeholderTextColor="#9ca3af"
                   secureTextEntry={!showLoginPassword}
                   value={loginPassword}
@@ -158,7 +160,7 @@ export default function AuthScreen() {
               </View>
 
               <TouchableOpacity className="self-start mb-5" onPress={() => flip("forgot")}>
-                <Text className="text-xs text-gray-500">Forgot my password</Text>
+                <Text className="text-xs text-gray-500">{t.login.forgotPassword}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -168,45 +170,43 @@ export default function AuthScreen() {
               >
                 {loginLoading
                   ? <ActivityIndicator color="#fff" />
-                  : <Text className="text-white text-base font-bold">Sign In</Text>
+                  : <Text className="text-white text-base font-bold">{t.login.signIn}</Text>
                 }
               </TouchableOpacity>
 
               <TouchableOpacity className="items-center" onPress={() => flip("register")}>
                 <Text className="text-xs text-gray-500">
-                  Don't have an account? <Text className="text-primary font-semibold">Sign Up</Text>
+                  {t.login.noAccount} <Text className="text-primary font-semibold">{t.login.signUp}</Text>
                 </Text>
               </TouchableOpacity>
             </>
           ) : face === "forgot" ? (
             forgotSuccess ? (
               <>
-                <Text className="text-2xl font-bold text-gray-900 text-center mb-2">Check your email</Text>
+                <Text className="text-2xl font-bold text-gray-900 text-center mb-2">{t.login.checkEmail}</Text>
                 <Text className="text-sm text-gray-500 text-center mb-8">
-                  We sent a password reset link to {forgotEmail}.
+                  {t.login.checkEmailResetBody(forgotEmail)}
                 </Text>
                 <TouchableOpacity
                   className="bg-primary rounded-xl p-3.5 items-center"
                   onPress={() => { setForgotSuccess(false); setForgotEmail(""); flip("login") }}
                 >
-                  <Text className="text-white text-base font-bold">Back to Sign In</Text>
+                  <Text className="text-white text-base font-bold">{t.login.backToSignIn}</Text>
                 </TouchableOpacity>
               </>
             ) : (
               <>
-                <Text className="text-2xl font-bold text-gray-900 text-center mb-1">Reset password</Text>
-                <Text className="text-sm text-gray-500 text-center mb-6">
-                  Enter your email and we'll send you a reset link.
-                </Text>
+                <Text className="text-2xl font-bold text-gray-900 text-center mb-1">{t.login.resetTitle}</Text>
+                <Text className="text-sm text-gray-500 text-center mb-6">{t.login.resetSubtitle}</Text>
 
                 {forgotError && <Text className="text-danger text-xs text-center mb-3">{forgotError}</Text>}
 
                 <Text className="text-sm font-semibold text-gray-700 mb-1.5">
-                  Email <Text className="text-danger">*</Text>
+                  {t.login.emailLabel} <Text className="text-danger">*</Text>
                 </Text>
                 <TextInput
                   className="border border-gray-200 rounded-xl p-3 text-sm text-gray-900 bg-gray-50 mb-6"
-                  placeholder="Enter your email"
+                  placeholder={t.login.emailPlaceholder}
                   placeholderTextColor="#9ca3af"
                   autoCapitalize="none"
                   keyboardType="email-address"
@@ -221,54 +221,52 @@ export default function AuthScreen() {
                 >
                   {forgotLoading
                     ? <ActivityIndicator color="#fff" />
-                    : <Text className="text-white text-base font-bold">Send Reset Link</Text>
+                    : <Text className="text-white text-base font-bold">{t.login.sendResetLink}</Text>
                   }
                 </TouchableOpacity>
 
                 <TouchableOpacity className="items-center" onPress={() => flip("login")}>
-                  <Text className="text-xs text-gray-500">
-                    Back to <Text className="text-primary font-semibold">Sign In</Text>
-                  </Text>
+                  <Text className="text-xs text-primary font-semibold">{t.login.backToSignIn}</Text>
                 </TouchableOpacity>
               </>
             )
           ) : regSuccess ? (
             <>
-              <Text className="text-2xl font-bold text-gray-900 text-center mb-2">Check your email</Text>
+              <Text className="text-2xl font-bold text-gray-900 text-center mb-2">{t.login.checkEmail}</Text>
               <Text className="text-sm text-gray-500 text-center mb-8">
-                We sent a confirmation link to {regEmail}.{"\n"}Click it to activate your account.
+                {t.login.checkEmailConfirmBody(regEmail)}
               </Text>
               <TouchableOpacity
                 className="bg-primary rounded-xl p-3.5 items-center"
                 onPress={() => { setRegSuccess(false); flip("login") }}
               >
-                <Text className="text-white text-base font-bold">Back to Sign In</Text>
+                <Text className="text-white text-base font-bold">{t.login.backToSignIn}</Text>
               </TouchableOpacity>
             </>
           ) : (
             <>
-              <Text className="text-2xl font-bold text-gray-900 text-center mb-1">Create account</Text>
-              <Text className="text-sm text-gray-500 text-center mb-6">Start managing your finances</Text>
+              <Text className="text-2xl font-bold text-gray-900 text-center mb-1">{t.login.createAccount}</Text>
+              <Text className="text-sm text-gray-500 text-center mb-6">{t.login.createAccountSubtitle}</Text>
 
               {regError && <Text className="text-danger text-xs text-center mb-3">{regError}</Text>}
 
               <Text className="text-sm font-semibold text-gray-700 mb-1.5">
-                Full name <Text className="text-danger">*</Text>
+                {t.login.fullNameLabel} <Text className="text-danger">*</Text>
               </Text>
               <TextInput
                 className="border border-gray-200 rounded-xl p-3 text-sm text-gray-900 bg-gray-50 mb-4"
-                placeholder="Enter your name"
+                placeholder={t.login.fullNamePlaceholder}
                 placeholderTextColor="#9ca3af"
                 value={regName}
                 onChangeText={setRegName}
               />
 
               <Text className="text-sm font-semibold text-gray-700 mb-1.5">
-                Email <Text className="text-danger">*</Text>
+                {t.login.emailLabel} <Text className="text-danger">*</Text>
               </Text>
               <TextInput
                 className="border border-gray-200 rounded-xl p-3 text-sm text-gray-900 bg-gray-50 mb-4"
-                placeholder="Enter your email"
+                placeholder={t.login.emailPlaceholder}
                 placeholderTextColor="#9ca3af"
                 autoCapitalize="none"
                 keyboardType="email-address"
@@ -277,12 +275,12 @@ export default function AuthScreen() {
               />
 
               <Text className="text-sm font-semibold text-gray-700 mb-1.5">
-                Password <Text className="text-danger">*</Text>
+                {t.login.passwordLabel} <Text className="text-danger">*</Text>
               </Text>
               <View className="flex-row items-center border border-gray-200 rounded-xl bg-gray-50 mb-4">
                 <TextInput
                   className="flex-1 p-3 text-sm text-gray-900"
-                  placeholder="At least 6 characters"
+                  placeholder={t.login.passwordMinChars}
                   placeholderTextColor="#9ca3af"
                   secureTextEntry={!showRegPassword}
                   value={regPassword}
@@ -294,11 +292,11 @@ export default function AuthScreen() {
               </View>
 
               <Text className="text-sm font-semibold text-gray-700 mb-1.5">
-                Confirm password <Text className="text-danger">*</Text>
+                {t.login.confirmPasswordLabel} <Text className="text-danger">*</Text>
               </Text>
               <TextInput
                 className="border border-gray-200 rounded-xl p-3 text-sm text-gray-900 bg-gray-50 mb-6"
-                placeholder="Repeat your password"
+                placeholder={t.login.confirmPasswordPlaceholder}
                 placeholderTextColor="#9ca3af"
                 secureTextEntry
                 value={regConfirm}
@@ -312,13 +310,13 @@ export default function AuthScreen() {
               >
                 {regLoading
                   ? <ActivityIndicator color="#fff" />
-                  : <Text className="text-white text-base font-bold">Create Account</Text>
+                  : <Text className="text-white text-base font-bold">{t.login.createAccount}</Text>
                 }
               </TouchableOpacity>
 
               <TouchableOpacity className="items-center" onPress={() => flip("login")}>
                 <Text className="text-xs text-gray-500">
-                  Already have an account? <Text className="text-primary font-semibold">Sign In</Text>
+                  {t.login.alreadyHaveAccount} <Text className="text-primary font-semibold">{t.login.signIn}</Text>
                 </Text>
               </TouchableOpacity>
             </>

@@ -3,15 +3,8 @@ import { View, Text, TouchableOpacity, Modal, Pressable } from "react-native"
 import { useRouter, usePathname } from "expo-router"
 import { useProfile } from "../hooks/useProfile"
 import { useAuth } from "../context/auth"
+import { useLocale } from "../context/locale"
 import { supabase } from "../lib/supabase"
-
-const NAV_ITEMS = [
-  { label: "Dashboard", href: "/(app)" },
-  { label: "Transactions", href: "/(app)/transactions" },
-  { label: "Reports", href: "/(app)/reports" },
-  { label: "Limits", href: "/(app)/limits" },
-  { label: "Settings", href: "/(app)/settings" },
-]
 
 function AvatarImage() {
   const { profile } = useProfile()
@@ -40,6 +33,7 @@ function AvatarImage() {
 function UserMenu() {
   const [open, setOpen] = useState(false)
   const { profile } = useProfile()
+  const { t } = useLocale()
   const router = useRouter()
   const avatarRef = useRef<View>(null)
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 })
@@ -73,27 +67,19 @@ function UserMenu() {
             className="absolute bg-surface rounded-xl shadow-lg overflow-hidden"
             style={{ top: menuPos.top, left: menuPos.left, minWidth: 200 }}
           >
-            {/* User info */}
             <View className="px-4 py-3 border-b border-gray-100">
-              <Text className="text-sm font-semibold text-gray-900">{profile?.name ?? "User"}</Text>
+              <Text className="text-sm font-semibold text-gray-900">{profile?.name ?? t.common.user}</Text>
               <Text className="text-xs text-gray-500 mt-0.5">{profile?.email}</Text>
             </View>
 
-            {/* Actions */}
-            <TouchableOpacity
-              className="flex-row items-center px-4 py-3 gap-3"
-              onPress={handleSettings}
-            >
-              <Text className="text-sm text-gray-700">⚙️  Settings</Text>
+            <TouchableOpacity className="flex-row items-center px-4 py-3 gap-3" onPress={handleSettings}>
+              <Text className="text-sm text-gray-700">{t.header.settings}</Text>
             </TouchableOpacity>
 
             <View className="h-px bg-gray-100" />
 
-            <TouchableOpacity
-              className="flex-row items-center px-4 py-3 gap-3"
-              onPress={handleLogout}
-            >
-              <Text className="text-sm text-danger">↩  Sign Out</Text>
+            <TouchableOpacity className="flex-row items-center px-4 py-3 gap-3" onPress={handleLogout}>
+              <Text className="text-sm text-danger">{t.header.signOut}</Text>
             </TouchableOpacity>
           </View>
         </Pressable>
@@ -105,6 +91,15 @@ function UserMenu() {
 export function Header() {
   const router = useRouter()
   const pathname = usePathname()
+  const { t } = useLocale()
+
+  const NAV_ITEMS = [
+    { label: t.nav.dashboard, href: "/(app)" },
+    { label: t.nav.transactions, href: "/(app)/transactions" },
+    { label: t.nav.reports, href: "/(app)/reports" },
+    { label: t.nav.limits, href: "/(app)/limits" },
+    { label: t.nav.settings, href: "/(app)/settings" },
+  ]
 
   function isActive(href: string) {
     if (href === "/(app)") return pathname === "/" || pathname === "/index"

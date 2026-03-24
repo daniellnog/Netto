@@ -8,7 +8,10 @@ export type Profile = {
   email: string
   avatarUrl: string | null
   currency: string
+  language: string
 }
+
+const SELECT = "id, name, email, avatarUrl, currency, language"
 
 export function useProfile() {
   const { session } = useAuth()
@@ -26,7 +29,7 @@ export function useProfile() {
 
     supabase
       .from("User")
-      .select("id, name, email, avatarUrl, currency")
+      .select(SELECT)
       .eq("id", session.user.id)
       .single()
       .then(({ data }) => {
@@ -49,9 +52,20 @@ export function useProfile() {
       .from("User")
       .update({ currency })
       .eq("id", session.user.id)
-      .select("id, name, email, avatarUrl, currency")
+      .select(SELECT)
       .single()
-    if (data) setProfile(data)
+    if (data) setProfile((prev) => ({ ...prev!, ...data }))
+  }
+
+  async function updateLanguage(language: string) {
+    if (!session?.user) return
+    const { data } = await supabase
+      .from("User")
+      .update({ language })
+      .eq("id", session.user.id)
+      .select(SELECT)
+      .single()
+    if (data) setProfile((prev) => ({ ...prev!, ...data }))
   }
 
   async function updateAvatar(file: File) {
@@ -63,16 +77,15 @@ export function useProfile() {
       .upload(path, file, { upsert: true, contentType: file.type })
     if (error) throw error
     const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path)
-    // append cache-buster so the browser reloads the image after update
     const urlWithBust = `${publicUrl}?t=${Date.now()}`
     const { data } = await supabase
       .from("User")
       .update({ avatarUrl: urlWithBust })
       .eq("id", session.user.id)
-      .select("id, name, email, avatarUrl, currency")
+      .select(SELECT)
       .single()
     if (data) setProfile((prev) => ({ ...prev!, ...data, avatarUrl: urlWithBust }))
   }
 
-  return { profile, loading, updateCurrency, updateAvatar }
+  return { profile, loading, updateCurrency, updateLanguage, updateAvatar }
 }

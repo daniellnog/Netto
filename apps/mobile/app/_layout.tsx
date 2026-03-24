@@ -2,6 +2,7 @@ import "../global.css"
 import { Stack, useRouter, useSegments } from "expo-router"
 import { useEffect } from "react"
 import { AuthProvider, useAuth } from "../context/auth"
+import { LocaleProvider } from "../context/locale"
 
 function RootLayoutNav() {
   const { session, loading } = useAuth()
@@ -26,7 +27,9 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <RootLayoutNav />
+      <LocaleProvider>
+        <RootLayoutNav />
+      </LocaleProvider>
     </AuthProvider>
   )
 }

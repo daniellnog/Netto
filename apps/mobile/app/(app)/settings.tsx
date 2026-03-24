@@ -2,21 +2,18 @@ import { useState, useEffect } from "react"
 import { View, Text, TouchableOpacity, Pressable, TextInput, Modal, ScrollView } from "react-native"
 import { useProfile } from "../../hooks/useProfile"
 import { useAuth } from "../../context/auth"
+import { useLocale } from "../../context/locale"
+import { LANGUAGES } from "../../locales"
 import { supabase } from "../../lib/supabase"
 
 type Section = "account" | "finances" | "categories"
-
-const SECTIONS: { id: Section; label: string; description: string }[] = [
-  { id: "account", label: "Account", description: "Personal info & account" },
-  { id: "finances", label: "Finances", description: "Currency, accounts & cards" },
-  { id: "categories", label: "Categories", description: "Manage categories" },
-]
 
 // ─── Account ────────────────────────────────────────────────────────────────
 
 function AccountSection() {
   const { profile, updateAvatar } = useProfile()
   const { session } = useAuth()
+  const { t, language, updateLanguage } = useLocale()
   const [uploading, setUploading] = useState(false)
   const [deleteModalVisible, setDeleteModalVisible] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -60,8 +57,8 @@ function AccountSection() {
 
   return (
     <View>
-      <Text className="text-lg font-bold text-gray-900 mb-1">Account</Text>
-      <Text className="text-sm text-gray-500 mb-6">Personal info & account</Text>
+      <Text className="text-lg font-bold text-gray-900 mb-1">{t.settings.account.title}</Text>
+      <Text className="text-sm text-gray-500 mb-6">{t.settings.account.subtitle}</Text>
 
       <View className="flex-row items-center gap-4 mb-6">
         {/* @ts-ignore – onClick/cursor valid on web */}
@@ -96,33 +93,50 @@ function AccountSection() {
 
       <View className="h-px bg-gray-100 my-6" />
 
-      <Text className="text-base font-semibold text-gray-900 mb-4">Danger zone</Text>
+      <Text className="text-base font-semibold text-gray-900 mb-3">{t.settings.account.languageLabel}</Text>
+      <View className="flex-row gap-2 flex-wrap mb-6">
+        {LANGUAGES.map((lang) => (
+          <Pressable
+            key={lang.code}
+            onPress={() => updateLanguage(lang.code)}
+            className={`px-4 py-2 rounded-full border ${language === lang.code ? "bg-primary border-primary" : "bg-gray-50 border-gray-200 hover:bg-gray-100"}`}
+          >
+            <Text className={`text-sm font-medium ${language === lang.code ? "text-white" : "text-gray-700"}`}>
+              {lang.label}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
+      <View className="h-px bg-gray-100 my-6" />
+
+      <Text className="text-base font-semibold text-gray-900 mb-4">{t.settings.account.dangerZone}</Text>
       <TouchableOpacity
         onPress={() => setDeleteModalVisible(true)}
         className="bg-red-50 border border-red-200 rounded-xl px-4 py-3"
       >
-        <Text className="text-sm font-semibold text-red-600">Delete account</Text>
-        <Text className="text-xs text-red-400 mt-0.5">Permanently delete your account and all data</Text>
+        <Text className="text-sm font-semibold text-red-600">{t.settings.account.deleteAccount}</Text>
+        <Text className="text-xs text-red-400 mt-0.5">{t.settings.account.deleteAccountSubtitle}</Text>
       </TouchableOpacity>
 
       <Modal visible={deleteModalVisible} transparent animationType="fade">
         <View className="flex-1 items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.4)" }}>
           <View className="bg-white rounded-2xl p-6 w-80">
-            <Text className="text-lg font-bold text-gray-900 mb-2">Delete account?</Text>
-            <Text className="text-sm text-gray-500 mb-6">This action is irreversible. All your data will be permanently deleted.</Text>
+            <Text className="text-lg font-bold text-gray-900 mb-2">{t.settings.account.deleteConfirmTitle}</Text>
+            <Text className="text-sm text-gray-500 mb-6">{t.settings.account.deleteConfirmBody}</Text>
             <View className="flex-row gap-3">
               <TouchableOpacity
                 onPress={() => setDeleteModalVisible(false)}
                 className="flex-1 bg-gray-100 rounded-xl py-3 items-center"
               >
-                <Text className="text-sm font-semibold text-gray-700">Cancel</Text>
+                <Text className="text-sm font-semibold text-gray-700">{t.common.cancel}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleDeleteAccount}
                 disabled={deleting}
                 className="flex-1 bg-red-500 rounded-xl py-3 items-center"
               >
-                <Text className="text-sm font-semibold text-white">{deleting ? "Deleting..." : "Delete"}</Text>
+                <Text className="text-sm font-semibold text-white">{deleting ? t.common.deleting : t.common.delete}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -149,6 +163,7 @@ const CURRENCIES = [
 
 function CurrencySection() {
   const { profile, updateCurrency } = useProfile()
+  const { t } = useLocale()
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
 
@@ -167,7 +182,7 @@ function CurrencySection() {
 
   return (
     <View>
-      <Text className="text-sm font-bold text-gray-700 mb-3">Currency</Text>
+      <Text className="text-sm font-bold text-gray-700 mb-3">{t.settings.currency.title}</Text>
 
       <Pressable
         onPress={() => setOpen(true)}
@@ -183,7 +198,7 @@ function CurrencySection() {
             </View>
           </>
         ) : (
-          <Text className="text-sm text-gray-400 flex-1">Select currency</Text>
+          <Text className="text-sm text-gray-400 flex-1">{t.settings.currency.selectPlaceholder}</Text>
         )}
         <Text className="text-gray-400 ml-3 text-xs">▼</Text>
       </Pressable>
@@ -192,11 +207,11 @@ function CurrencySection() {
         <Pressable className="flex-1 bg-black/40 items-center justify-center" onPress={() => { setOpen(false); setSearch("") }}>
           <Pressable className="bg-white rounded-2xl overflow-hidden" style={{ width: 440, maxHeight: 480 }} onPress={() => {}}>
             <View className="px-4 pt-4 pb-3 border-b border-gray-100">
-              <Text className="text-sm font-bold text-gray-900 mb-3">Select currency</Text>
+              <Text className="text-sm font-bold text-gray-900 mb-3">{t.settings.currency.modalTitle}</Text>
               <TextInput
                 value={search}
                 onChangeText={setSearch}
-                placeholder="Search..."
+                placeholder={t.settings.currency.searchPlaceholder}
                 autoFocus
                 className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800"
               />
@@ -221,7 +236,7 @@ function CurrencySection() {
               })}
               {filtered.length === 0 && (
                 <View className="px-4 py-6 items-center">
-                  <Text className="text-sm text-gray-400">No currencies found</Text>
+                  <Text className="text-sm text-gray-400">{t.settings.currency.notFound}</Text>
                 </View>
               )}
             </ScrollView>
@@ -245,6 +260,7 @@ type AccountRow = {
 
 function AccountsSection() {
   const { session } = useAuth()
+  const { t } = useLocale()
   const [accounts, setAccounts] = useState<AccountRow[]>([])
   const [modalVisible, setModalVisible] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -273,7 +289,7 @@ function AccountsSection() {
   }
 
   async function handleSave() {
-    if (!newName.trim()) { setSaveError("Name is required."); return }
+    if (!newName.trim()) { setSaveError(t.common.errorNameRequired); return }
     if (!session?.user) return
     setSaveError(null)
     setSaving(true)
@@ -317,7 +333,7 @@ function AccountsSection() {
 
   return (
     <View>
-      <Text className="text-sm font-bold text-gray-700 mb-4">Accounts</Text>
+      <Text className="text-sm font-bold text-gray-700 mb-4">{t.settings.accounts.title}</Text>
 
       <View className="w-[50%]">
         {accounts.length > 0 && (
@@ -334,7 +350,7 @@ function AccountsSection() {
                   className={`px-2 py-1 rounded-md mr-3 ${account.excludeFromTotal ? "bg-amber-100" : "bg-gray-200"}`}
                 >
                   <Text className={`text-xs font-medium ${account.excludeFromTotal ? "text-amber-700" : "text-gray-400"}`}>
-                    Excl. total
+                    {t.settings.accounts.excludeShort}
                   </Text>
                 </Pressable>
                 <Pressable onPress={() => handleOpenEdit(account)} className="hover:opacity-70 mr-3">
@@ -352,16 +368,16 @@ function AccountsSection() {
           onPress={() => setModalVisible(true)}
           className="border border-dashed border-gray-300 rounded-xl py-3 items-center hover:bg-gray-50"
         >
-          <Text className="text-sm text-gray-400 font-medium">+ Add account</Text>
+          <Text className="text-sm text-gray-400 font-medium">{t.settings.accounts.addButton}</Text>
         </Pressable>
       </View>
 
       <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={handleCancel}>
         <Pressable className="flex-1 bg-black/40 items-center justify-center" onPress={handleCancel}>
           <Pressable className="bg-white rounded-2xl p-6" style={{ width: 440 }} onPress={() => {}}>
-            <Text className="text-base font-bold text-gray-900 mb-4">{editingId ? "Edit Account" : "Add Account"}</Text>
+            <Text className="text-base font-bold text-gray-900 mb-4">{editingId ? t.settings.accounts.editTitle : t.settings.accounts.addTitle}</Text>
 
-            <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">Icon</Text>
+            <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">{t.common.icon}</Text>
             <View className="flex-row flex-wrap gap-2 mb-4">
               {ACCOUNT_ICONS.map((icon) => (
                 <TouchableOpacity
@@ -374,11 +390,11 @@ function AccountsSection() {
               ))}
             </View>
 
-            <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">Name <Text className="text-danger">*</Text></Text>
+            <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">{t.common.name} <Text className="text-danger">*</Text></Text>
             <TextInput
               value={newName}
               onChangeText={setNewName}
-              placeholder="e.g. Main checking account"
+              placeholder={t.settings.accounts.namePlaceholder}
               autoFocus
               className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 mb-4"
             />
@@ -387,15 +403,15 @@ function AccountsSection() {
               <View className={`w-5 h-5 rounded border-2 items-center justify-center ${newExclude ? "bg-primary border-primary" : "border-gray-300 bg-white"}`}>
                 {newExclude && <Text className="text-white text-xs font-bold">✓</Text>}
               </View>
-              <Text className="text-sm text-gray-700">Exclude from total balance</Text>
+              <Text className="text-sm text-gray-700">{t.settings.accounts.excludeFromTotal}</Text>
             </Pressable>
 
             <View className="flex-row gap-2">
               <TouchableOpacity onPress={handleSave} disabled={saving} className="flex-1 bg-primary rounded-lg py-2.5 items-center">
-                <Text className="text-white text-sm font-semibold">{saving ? "Saving..." : editingId ? "Save" : "Add"}</Text>
+                <Text className="text-white text-sm font-semibold">{saving ? t.common.saving : editingId ? t.common.save : t.common.add}</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={handleCancel} className="flex-1 bg-gray-100 rounded-lg py-2.5 items-center">
-                <Text className="text-gray-700 text-sm font-semibold">Cancel</Text>
+                <Text className="text-gray-700 text-sm font-semibold">{t.common.cancel}</Text>
               </TouchableOpacity>
             </View>
             {saveError && <Text className="text-danger text-xs mt-3 text-center">{saveError}</Text>}
@@ -473,6 +489,7 @@ function DayPicker({ value, onChange }: { value: number | null; onChange: (d: nu
 }
 
 function CardIconPicker({ value, onChange }: { value: string; onChange: (icon: string) => void }) {
+  const { t } = useLocale()
   const [tab, setTab] = useState<"generic" | "institution">(
     isInstitutionKey(value) ? "institution" : "generic"
   )
@@ -480,14 +497,14 @@ function CardIconPicker({ value, onChange }: { value: string; onChange: (icon: s
   return (
     <View>
       <View className="flex-row gap-1 mb-3">
-        {(["generic", "institution"] as const).map((t) => (
+        {(["generic", "institution"] as const).map((tabKey) => (
           <Pressable
-            key={t}
-            onPress={() => setTab(t)}
-            className={`px-3 py-1 rounded-full ${tab === t ? "bg-primary" : "bg-gray-200 hover:bg-gray-300"}`}
+            key={tabKey}
+            onPress={() => setTab(tabKey)}
+            className={`px-3 py-1 rounded-full ${tab === tabKey ? "bg-primary" : "bg-gray-200 hover:bg-gray-300"}`}
           >
-            <Text className={`text-xs font-medium ${tab === t ? "text-white" : "text-gray-600"}`}>
-              {t === "generic" ? "Generic" : "Institutions"}
+            <Text className={`text-xs font-medium ${tab === tabKey ? "text-white" : "text-gray-600"}`}>
+              {tabKey === "generic" ? t.settings.creditCards.iconGeneric : t.settings.creditCards.iconInstitutions}
             </Text>
           </Pressable>
         ))}
@@ -537,6 +554,7 @@ type CreditCardRow = {
 
 function CreditCardsSection() {
   const { session } = useAuth()
+  const { t } = useLocale()
   const [cards, setCards] = useState<CreditCardRow[]>([])
   const [accounts, setAccounts] = useState<{ id: string; name: string; icon: string }[]>([])
   const [modalVisible, setModalVisible] = useState(false)
@@ -579,12 +597,12 @@ function CreditCardsSection() {
   }
 
   async function handleSave() {
-    if (!newName.trim()) { setSaveError("Name is required."); return }
-    if (!newClosingDay) { setSaveError("Closing day is required."); return }
-    if (!newDueDay) { setSaveError("Due day is required."); return }
+    if (!newName.trim()) { setSaveError(t.common.errorNameRequired); return }
+    if (!newClosingDay) { setSaveError(t.settings.creditCards.errorClosingDay); return }
+    if (!newDueDay) { setSaveError(t.settings.creditCards.errorDueDay); return }
     if (!session?.user) return
     const limitVal = newLimit.trim() ? parseFloat(newLimit.replace(",", ".")) : null
-    if (limitVal !== null && (isNaN(limitVal) || limitVal <= 0)) { setSaveError("Credit limit must be a positive number."); return }
+    if (limitVal !== null && (isNaN(limitVal) || limitVal <= 0)) { setSaveError(t.settings.creditCards.errorCreditLimit); return }
     setSaveError(null)
     setSaving(true)
     if (editingId) {
@@ -628,7 +646,7 @@ function CreditCardsSection() {
 
   return (
     <View>
-      <Text className="text-sm font-bold text-gray-700 mb-4">Credit Cards</Text>
+      <Text className="text-sm font-bold text-gray-700 mb-4">{t.settings.creditCards.title}</Text>
 
       <View className="w-[50%]">
         {cards.length > 0 && (
@@ -646,7 +664,7 @@ function CreditCardsSection() {
                   <View className="flex-1">
                     <Text className="text-sm font-medium text-gray-800">{card.name}</Text>
                     <Text className="text-xs text-gray-400 mt-0.5">
-                      Closes {card.closingDay} · Due {card.dueDay}
+                      {t.settings.creditCards.closingInfo(card.closingDay, card.dueDay)}
                       {account ? ` · ${account.icon} ${account.name}` : ""}
                     </Text>
                   </View>
@@ -669,7 +687,7 @@ function CreditCardsSection() {
           onPress={() => setModalVisible(true)}
           className="border border-dashed border-gray-300 rounded-xl py-3 items-center hover:bg-gray-50"
         >
-          <Text className="text-sm text-gray-400 font-medium">+ Add card</Text>
+          <Text className="text-sm text-gray-400 font-medium">{t.settings.creditCards.addButton}</Text>
         </Pressable>
       </View>
 
@@ -677,12 +695,12 @@ function CreditCardsSection() {
         <Pressable className="flex-1 bg-black/40 items-center justify-center" onPress={handleCancel}>
           <Pressable className="bg-white rounded-2xl max-h-[90%]" style={{ width: 540 }} onPress={() => {}}>
             <ScrollView contentContainerStyle={{ padding: 28 }} showsVerticalScrollIndicator={false}>
-              <Text className="text-base font-bold text-gray-900 mb-5">{editingId ? "Edit Credit Card" : "Add Credit Card"}</Text>
+              <Text className="text-base font-bold text-gray-900 mb-5">{editingId ? t.settings.creditCards.editTitle : t.settings.creditCards.addTitle}</Text>
 
               {/* Icon + Name row */}
               <View className="flex-row gap-4 mb-5">
                 <View className="flex-1">
-                  <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">Icon</Text>
+                  <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">{t.common.icon}</Text>
                   <CardIconPicker value={newIcon} onChange={setNewIcon} />
                 </View>
               </View>
@@ -690,17 +708,17 @@ function CreditCardsSection() {
               {/* Name + Limit row */}
               <View className="flex-row gap-4 mb-5">
                 <View className="flex-1">
-                  <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">Name <Text className="text-danger">*</Text></Text>
+                  <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">{t.common.name} <Text className="text-danger">*</Text></Text>
                   <TextInput
                     value={newName}
                     onChangeText={setNewName}
-                    placeholder="e.g. Nubank Gold"
+                    placeholder={t.settings.creditCards.namePlaceholder}
                     autoFocus
                     className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800"
                   />
                 </View>
                 <View style={{ width: 140 }}>
-                  <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">Credit limit</Text>
+                  <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">{t.settings.creditCards.creditLimit}</Text>
                   <TextInput
                     value={newLimit}
                     onChangeText={setNewLimit}
@@ -715,22 +733,22 @@ function CreditCardsSection() {
               <View className="flex-row gap-4 mb-5">
                 <View className="flex-1">
                   <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">
-                    Closing day <Text className="text-danger">*</Text>{newClosingDay ? <Text className="text-primary normal-case font-bold"> · {newClosingDay}</Text> : null}
+                    {t.settings.creditCards.closingDay} <Text className="text-danger">*</Text>{newClosingDay ? <Text className="text-primary normal-case font-bold"> · {newClosingDay}</Text> : null}
                   </Text>
                   <DayPicker value={newClosingDay} onChange={setNewClosingDay} />
                 </View>
                 <View className="flex-1">
                   <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">
-                    Due day <Text className="text-danger">*</Text>{newDueDay ? <Text className="text-primary normal-case font-bold"> · {newDueDay}</Text> : null}
+                    {t.settings.creditCards.dueDay} <Text className="text-danger">*</Text>{newDueDay ? <Text className="text-primary normal-case font-bold"> · {newDueDay}</Text> : null}
                   </Text>
                   <DayPicker value={newDueDay} onChange={setNewDueDay} />
                 </View>
               </View>
 
               {/* Default account */}
-              <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">Default payment account</Text>
+              <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">{t.settings.creditCards.defaultAccount}</Text>
               {accounts.length === 0 ? (
-                <Text className="text-xs text-gray-400 mb-5">No accounts yet. Add one in Accounts.</Text>
+                <Text className="text-xs text-gray-400 mb-5">{t.settings.creditCards.noAccounts}</Text>
               ) : (
                 <View className="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden mb-6">
                   <Pressable
@@ -738,7 +756,7 @@ function CreditCardsSection() {
                     className={`px-3 py-2 ${!newAccountId ? "bg-primary/10" : "hover:bg-gray-50"}`}
                   >
                     <Text className={`text-sm ${!newAccountId ? "text-primary font-medium" : "text-gray-400"}`}>
-                      None
+                      {t.common.none}
                     </Text>
                   </Pressable>
                   {accounts.map((acc) => (
@@ -764,10 +782,10 @@ function CreditCardsSection() {
                   disabled={saving}
                   className="flex-1 bg-primary rounded-lg py-2.5 items-center"
                 >
-                  <Text className="text-white text-sm font-semibold">{saving ? "Saving..." : editingId ? "Save" : "Add"}</Text>
+                  <Text className="text-white text-sm font-semibold">{saving ? t.common.saving : editingId ? t.common.save : t.common.add}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={handleCancel} className="flex-1 bg-gray-100 rounded-lg py-2.5 items-center">
-                  <Text className="text-gray-700 text-sm font-semibold">Cancel</Text>
+                  <Text className="text-gray-700 text-sm font-semibold">{t.common.cancel}</Text>
                 </TouchableOpacity>
               </View>
               {saveError && (
@@ -795,6 +813,7 @@ type CategoryRow = { id: string; name: string; icon: string; color: string; type
 
 function CategoriesSection() {
   const { session } = useAuth()
+  const { t } = useLocale()
   const [tab, setTab] = useState<"expense" | "income">("expense")
   const [categories, setCategories] = useState<CategoryRow[]>([])
   const [modalVisible, setModalVisible] = useState(false)
@@ -826,7 +845,7 @@ function CategoriesSection() {
   }
 
   async function handleSave() {
-    if (!newName.trim()) { setSaveError("Name is required."); return }
+    if (!newName.trim()) { setSaveError(t.common.errorNameRequired); return }
     if (!session?.user) return
     setSaveError(null)
     setSaving(true)
@@ -868,18 +887,20 @@ function CategoriesSection() {
 
   return (
     <View>
-      <Text className="text-lg font-bold text-gray-900 mb-1">Categories</Text>
-      <Text className="text-sm text-gray-500 mb-6">Manage your income and expense categories</Text>
+      <Text className="text-lg font-bold text-gray-900 mb-1">{t.settings.categories.title}</Text>
+      <Text className="text-sm text-gray-500 mb-6">{t.settings.categories.subtitle}</Text>
 
       {/* Tabs */}
       <View className="flex-row gap-2 mb-4">
-        {(["expense", "income"] as const).map((t) => (
+        {(["expense", "income"] as const).map((tabKey) => (
           <Pressable
-            key={t}
-            onPress={() => setTab(t)}
-            className={`px-4 py-1.5 rounded-full ${tab === t ? "bg-primary" : "bg-gray-100 hover:bg-gray-200"}`}
+            key={tabKey}
+            onPress={() => setTab(tabKey)}
+            className={`px-4 py-1.5 rounded-full ${tab === tabKey ? "bg-primary" : "bg-gray-100 hover:bg-gray-200"}`}
           >
-            <Text className={`text-sm font-medium capitalize ${tab === t ? "text-white" : "text-gray-600"}`}>{t}</Text>
+            <Text className={`text-sm font-medium ${tab === tabKey ? "text-white" : "text-gray-600"}`}>
+              {tabKey === "expense" ? t.settings.categories.expense : t.settings.categories.income}
+            </Text>
           </Pressable>
         ))}
       </View>
@@ -909,7 +930,7 @@ function CategoriesSection() {
           onPress={() => setModalVisible(true)}
           className="border border-dashed border-gray-300 rounded-xl py-3 items-center hover:bg-gray-50"
         >
-          <Text className="text-sm text-gray-400 font-medium">+ Add category</Text>
+          <Text className="text-sm text-gray-400 font-medium">{t.settings.categories.addButton}</Text>
         </Pressable>
       </View>
 
@@ -917,11 +938,11 @@ function CategoriesSection() {
         <Pressable className="flex-1 bg-black/40 items-center justify-center" onPress={handleCancel}>
           <Pressable className="bg-white rounded-2xl p-6" style={{ width: 440 }} onPress={() => {}}>
             <Text className="text-base font-bold text-gray-900 mb-5">
-              {editingId ? "Edit" : "Add"} {tab === "expense" ? "Expense" : "Income"} Category
+              {t.settings.categories.modalTitle(editingId ? "edit" : "add", tab)}
             </Text>
 
             {/* Icon */}
-            <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">Icon</Text>
+            <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">{t.common.icon}</Text>
             <View className="flex-row flex-wrap gap-2 mb-5">
               {CATEGORY_ICONS.map((icon) => (
                 <TouchableOpacity
@@ -935,7 +956,7 @@ function CategoriesSection() {
             </View>
 
             {/* Color */}
-            <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">Color</Text>
+            <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">{t.common.color}</Text>
             <View className="flex-row flex-wrap gap-2 mb-5">
               {CATEGORY_COLORS.map((color) => (
                 <TouchableOpacity
@@ -950,21 +971,21 @@ function CategoriesSection() {
             </View>
 
             {/* Name */}
-            <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">Name <Text className="text-danger">*</Text></Text>
+            <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">{t.common.name} <Text className="text-danger">*</Text></Text>
             <TextInput
               value={newName}
               onChangeText={setNewName}
-              placeholder="e.g. Groceries"
+              placeholder={t.settings.categories.namePlaceholder}
               autoFocus
               className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 mb-5"
             />
 
             <View className="flex-row gap-2">
               <TouchableOpacity onPress={handleSave} disabled={saving} className="flex-1 bg-primary rounded-lg py-2.5 items-center">
-                <Text className="text-white text-sm font-semibold">{saving ? "Saving..." : editingId ? "Save" : "Add"}</Text>
+                <Text className="text-white text-sm font-semibold">{saving ? t.common.saving : editingId ? t.common.save : t.common.add}</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={handleCancel} className="flex-1 bg-gray-100 rounded-lg py-2.5 items-center">
-                <Text className="text-gray-700 text-sm font-semibold">Cancel</Text>
+                <Text className="text-gray-700 text-sm font-semibold">{t.common.cancel}</Text>
               </TouchableOpacity>
             </View>
             {saveError && <Text className="text-danger text-xs mt-3 text-center">{saveError}</Text>}
@@ -978,10 +999,11 @@ function CategoriesSection() {
 // ─── Layout ──────────────────────────────────────────────────────────────────
 
 function FinancesSection() {
+  const { t } = useLocale()
   return (
     <View>
-      <Text className="text-lg font-bold text-gray-900 mb-1">Finances</Text>
-      <Text className="text-sm text-gray-500 mb-6">Currency, accounts and credit cards</Text>
+      <Text className="text-lg font-bold text-gray-900 mb-1">{t.settings.sections.finances.label}</Text>
+      <Text className="text-sm text-gray-500 mb-6">{t.settings.sections.finances.description}</Text>
       <CurrencySection />
       <View className="h-px bg-gray-100 my-6" />
       <AccountsSection />
@@ -991,14 +1013,21 @@ function FinancesSection() {
   )
 }
 
-const SECTION_CONTENT: Record<Section, React.ReactNode> = {
-  account: <AccountSection />,
-  finances: <FinancesSection />,
-  categories: <CategoriesSection />,
-}
-
 export default function SettingsScreen() {
+  const { t } = useLocale()
   const [active, setActive] = useState<Section>("account")
+
+  const SECTIONS: { id: Section; label: string; description: string }[] = [
+    { id: "account", ...t.settings.sections.account },
+    { id: "finances", ...t.settings.sections.finances },
+    { id: "categories", ...t.settings.sections.categories },
+  ]
+
+  const SECTION_CONTENT: Record<Section, React.ReactNode> = {
+    account: <AccountSection />,
+    finances: <FinancesSection />,
+    categories: <CategoriesSection />,
+  }
 
   return (
     <View className="flex-1 flex-row gap-6">
