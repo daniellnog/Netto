@@ -94,7 +94,7 @@ export function Header() {
   const { t } = useLocale()
 
   const NAV_ITEMS = [
-    { label: t.nav.dashboard, href: "/(app)" },
+    { label: t.nav.overview, href: "/(app)" },
     { label: t.nav.transactions, href: "/(app)/transactions" },
     { label: t.nav.reports, href: "/(app)/reports" },
     { label: t.nav.limits, href: "/(app)/limits" },

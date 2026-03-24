@@ -19,7 +19,7 @@ const en: Dictionary = {
     errorNameRequired: "Name is required.",
   },
   nav: {
-    dashboard: "Dashboard",
+    overview: "Overview",
     transactions: "Transactions",
     reports: "Reports",
     limits: "Limits",
@@ -123,10 +123,22 @@ const en: Dictionary = {
     },
   },
   pages: {
-    dashboard: "Dashboard",
+    overview: "Overview",
     transactions: "Transactions",
     reports: "Reports",
     limits: "Spending Limits",
+  },
+  overview: {
+    greeting: (name) => `Hello, ${name}`,
+    thisMonth: "This month",
+    income: "Income",
+    expenses: "Expenses",
+    net: "Net",
+    recentTransactions: "Recent transactions",
+    noTransactions: "No transactions yet.",
+    spendingLimits: "Spending limits",
+    noLimits: "No spending limits defined.",
+    limitOf: (spent, total) => `${spent} of ${total}`,
   },
 }
 

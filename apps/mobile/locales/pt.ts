@@ -19,7 +19,7 @@ const pt: Dictionary = {
     errorNameRequired: "O nome é obrigatório.",
   },
   nav: {
-    dashboard: "Dashboard",
+    overview: "Visão geral",
     transactions: "Transações",
     reports: "Relatórios",
     limits: "Limites",
@@ -123,10 +123,22 @@ const pt: Dictionary = {
     },
   },
   pages: {
-    dashboard: "Dashboard",
+    overview: "Visão geral",
     transactions: "Transações",
     reports: "Relatórios",
     limits: "Limites de Gastos",
+  },
+  overview: {
+    greeting: (name) => `Olá, ${name}`,
+    thisMonth: "Este mês",
+    income: "Receita",
+    expenses: "Despesas",
+    net: "Saldo",
+    recentTransactions: "Transações recentes",
+    noTransactions: "Ainda não há transações.",
+    spendingLimits: "Limites de gastos",
+    noLimits: "Nenhum limite de gastos definido.",
+    limitOf: (spent, total) => `${spent} de ${total}`,
   },
 }
 

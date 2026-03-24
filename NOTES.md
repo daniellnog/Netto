@@ -8,7 +8,7 @@ Personal finance manager with web and mobile support.
 - Provide clear visual reports and spending limit controls
 
 ## Features
-- [ ] Dashboard (visual overview of finances)
+- [ ] Overview / Visão geral (month summary, recent transactions, spending limits)
 - [ ] Transactions (log income and expenses)
 - [ ] Reports (charts and summaries)
 - [ ] Spending Limits (budget control per category)
@@ -26,7 +26,7 @@ Personal finance manager with web and mobile support.
 ## Pages
 | Route | Component |
 |---|---|
-| `/` | `Dashboard` |
+| `/` | `Overview` |
 | `/transactions` | `Transactions` |
 | `/reports` | `Reports` |
 | `/limits` | `SpendingLimits` |

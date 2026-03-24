@@ -17,7 +17,7 @@ export type Dictionary = {
     errorNameRequired: string
   }
   nav: {
-    dashboard: string
+    overview: string
     transactions: string
     reports: string
     limits: string
@@ -119,9 +119,21 @@ export type Dictionary = {
     }
   }
   pages: {
-    dashboard: string
+    overview: string
     transactions: string
     reports: string
     limits: string
+  }
+  overview: {
+    greeting: (name: string) => string
+    thisMonth: string
+    income: string
+    expenses: string
+    net: string
+    recentTransactions: string
+    noTransactions: string
+    spendingLimits: string
+    noLimits: string
+    limitOf: (spent: string, total: string) => string
   }
 }
