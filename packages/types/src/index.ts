@@ -31,3 +31,34 @@ export interface SpendingLimit {
   amount: number
   currency: Currency
 }
+
+export type BillRecurrence = "once" | "weekly" | "monthly" | "yearly"
+
+export type BillPaymentStatus = "pending" | "paid" | "overdue"
+
+export interface Bill {
+  id: string
+  userId: string
+  name: string
+  amount: number
+  type: TransactionType
+  recurrence: BillRecurrence
+  dueDay?: number
+  startDate: Date
+  category: string
+  notes?: string
+  isActive: boolean
+  createdAt: Date
+}
+
+export interface BillPayment {
+  id: string
+  billId: string
+  userId: string
+  amount: number
+  dueDate: Date
+  paidAt?: Date
+  status: BillPaymentStatus
+  transactionId?: string
+  createdAt: Date
+}

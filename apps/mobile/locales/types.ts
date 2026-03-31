@@ -127,6 +127,41 @@ export type Dictionary = {
     reports: string
     limits: string
   }
+  transactions: {
+    newExpense: string
+    newIncome: string
+    newTransfer: string
+    descriptionPlaceholder: string
+    amountLabel: string
+    dateLabel: string
+    accountLabel: string
+    categoryLabel: string
+    categorySearchPlaceholder: string
+    notesLabel: string
+    notesPlaceholder: string
+    recurringLabel: string
+    recurrenceTypeLabel: string
+    weekly: string
+    monthly: string
+    yearly: string
+    dueDayLabel: string
+    fromAccount: string
+    toAccount: string
+    noTransactions: string
+    filterPlaceholder: string
+    dayBalance: string
+    overdueAlert: (n: number) => string
+    noAccounts: string
+    addTransaction: string
+    expense: string
+    income: string
+    transfer: string
+    selectAccount: string
+    selectCategory: string
+    validationError: string
+    validationErrorMsg: string
+    recurringCreated: string
+  }
   overview: {
     greeting: (name: string) => string
     accounts: string
@@ -141,5 +176,14 @@ export type Dictionary = {
     spendingLimits: string
     noLimits: string
     limitOf: (spent: string, total: string) => string
+    myCards: string
+    billsToPay: string
+    billsToReceive: string
+    overdue: string
+    upcoming: string
+    noBills: string
+    topSpending: string
+    comingSoon: string
+    quickAccess: string
   }
 }
