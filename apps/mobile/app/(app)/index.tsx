@@ -5,6 +5,7 @@ import { useAuth } from "../../context/auth"
 import { useProfile } from "../../hooks/useProfile"
 import { useLocale } from "../../context/locale"
 import { supabase } from "../../lib/supabase"
+import { AppIcon } from "../../lib/icons"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -307,7 +308,7 @@ export default function OverviewScreen() {
               <>
                 {accounts.map((acc, i) => (
                   <View key={acc.id} className={`flex-row items-center px-3 py-2 ${i > 0 ? "border-t border-gray-100" : ""}`}>
-                    <Text className="text-base">{acc.icon}</Text>
+                    <AppIcon name={acc.icon} size={16} color="#374151" />
                     <Text className="flex-1 text-[11px] font-medium text-gray-800 ml-2" numberOfLines={1}>{acc.name}</Text>
                     <Text className={`text-[11px] font-semibold ml-1 ${Number(acc.balance) < 0 ? "text-red-500" : "text-gray-800"}`} numberOfLines={1}>
                       {fmt(Number(acc.balance), currency)}
@@ -335,7 +336,7 @@ export default function OverviewScreen() {
               creditCards.map((card, i) => (
                 <View key={card.id} className={`px-3 py-2.5 ${i > 0 ? "border-t border-gray-100" : ""}`}>
                   <View className="flex-row items-center">
-                    <Text className="text-base">{card.icon}</Text>
+                    <AppIcon name={card.icon} size={16} color="#374151" />
                     <Text className="flex-1 text-[11px] font-medium text-gray-800 ml-2" numberOfLines={1}>{card.name}</Text>
                   </View>
                   {card.creditLimit != null && (

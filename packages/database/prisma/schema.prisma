@@ -81,6 +81,7 @@ model Transaction {
   categoryId  String?
   accountId   String?
   date        DateTime
+  status      String   @default("confirmed") // "confirmed" | "pending"
   createdAt   DateTime @default(now())
 
   user     User      @relation(fields: [userId], references: [id])

@@ -1,10 +1,20 @@
 import { useState, useEffect } from "react"
 import { View, Text, TouchableOpacity, Pressable, TextInput, Modal, ScrollView } from "react-native"
+import { Check, ChevronDown } from "lucide-react-native"
 import { useProfile } from "../../hooks/useProfile"
 import { useAuth } from "../../context/auth"
 import { useLocale } from "../../context/locale"
 import { LANGUAGES } from "../../locales"
 import { supabase } from "../../lib/supabase"
+import {
+  AppIcon,
+  ACCOUNT_ICON_NAMES,
+  CATEGORY_ICON_NAMES,
+  CARD_ICON_NAMES,
+  DEFAULT_ACCOUNT_ICON,
+  DEFAULT_CATEGORY_ICON,
+  DEFAULT_CARD_ICON,
+} from "../../lib/icons"
 
 type Section = "account" | "finances" | "categories"
 
@@ -200,7 +210,7 @@ function CurrencySection() {
         ) : (
           <Text className="text-sm text-gray-400 flex-1">{t.settings.currency.selectPlaceholder}</Text>
         )}
-        <Text className="text-gray-400 ml-3 text-xs">▼</Text>
+        <ChevronDown size={14} color="#9CA3AF" style={{ marginLeft: 12 }} />
       </Pressable>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
@@ -230,7 +240,7 @@ function CurrencySection() {
                       <Text className={`text-sm font-medium ${isSelected ? "text-primary" : "text-gray-800"}`}>{c.label}</Text>
                       <Text className="text-xs text-gray-400">{c.code}</Text>
                     </View>
-                    {isSelected && <Text className="text-primary font-bold">✓</Text>}
+                    {isSelected && <Check size={16} color="#4e80f5" strokeWidth={2.5} />}
                   </Pressable>
                 )
               })}
@@ -249,7 +259,6 @@ function CurrencySection() {
 
 // ─── Accounts ───────────────────────────────────────────────────────────────
 
-const ACCOUNT_ICONS = ["💳", "🏦", "💰", "🏧", "💵", "📊", "🏠", "✈️", "🎯", "💼"]
 
 type AccountRow = {
   id: string
@@ -266,7 +275,7 @@ function AccountsSection() {
   const [modalVisible, setModalVisible] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [newName, setNewName] = useState("")
-  const [newIcon, setNewIcon] = useState("💳")
+  const [newIcon, setNewIcon] = useState(DEFAULT_ACCOUNT_ICON)
   const [newBalance, setNewBalance] = useState("")
   const [newExclude, setNewExclude] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -331,7 +340,7 @@ function AccountsSection() {
     setModalVisible(false)
     setEditingId(null)
     setNewName("")
-    setNewIcon("💳")
+    setNewIcon(DEFAULT_ACCOUNT_ICON)
     setNewBalance("")
     setNewExclude(false)
     setSaveError(null)
@@ -349,7 +358,7 @@ function AccountsSection() {
                 key={account.id}
                 className={`flex-row items-center px-4 py-3 ${i > 0 ? "border-t border-gray-100" : ""}`}
               >
-                <Text className="text-xl w-8">{account.icon}</Text>
+                <View className="w-8 items-center"><AppIcon name={account.icon} size={20} color="#374151" /></View>
                 <Text className="flex-1 text-sm font-medium text-gray-800 mx-3">{account.name}</Text>
                 <Text className="text-sm font-semibold text-gray-600 mr-3">
                   {Number(account.balance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -388,13 +397,13 @@ function AccountsSection() {
 
             <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">{t.common.icon}</Text>
             <View className="flex-row flex-wrap gap-2 mb-4">
-              {ACCOUNT_ICONS.map((icon) => (
+              {ACCOUNT_ICON_NAMES.map((icon) => (
                 <TouchableOpacity
                   key={icon}
                   onPress={() => setNewIcon(icon)}
                   className={`w-9 h-9 rounded-lg items-center justify-center ${newIcon === icon ? "bg-primary/15 border border-primary" : "bg-gray-50 border border-gray-200"}`}
                 >
-                  <Text className="text-lg">{icon}</Text>
+                  <AppIcon name={icon} size={18} color={newIcon === icon ? "#4e80f5" : "#6B7280"} />
                 </TouchableOpacity>
               ))}
             </View>
@@ -424,7 +433,7 @@ function AccountsSection() {
 
             <Pressable onPress={() => setNewExclude((v) => !v)} className="flex-row items-center gap-3 mb-6">
               <View className={`w-5 h-5 rounded border-2 items-center justify-center ${newExclude ? "bg-primary border-primary" : "border-gray-300 bg-white"}`}>
-                {newExclude && <Text className="text-white text-xs font-bold">✓</Text>}
+                {newExclude && <Check size={12} color="white" strokeWidth={3} />}
               </View>
               <Text className="text-sm text-gray-700">{t.settings.accounts.excludeFromTotal}</Text>
             </Pressable>
@@ -447,7 +456,6 @@ function AccountsSection() {
 
 // ─── Credit Cards ────────────────────────────────────────────────────────────
 
-const CARD_GENERIC_ICONS = ["💳", "🌐", "💎", "⭐", "🪙", "💵", "🎯", "💼"]
 
 const CARD_INSTITUTIONS = [
   // International
@@ -491,7 +499,7 @@ function CardIconBadge({ icon }: { icon: string }) {
       </View>
     )
   }
-  return <Text className="text-xl">{icon}</Text>
+  return <AppIcon name={icon} size={20} color="#374151" />
 }
 
 function DayPicker({ value, onChange }: { value: number | null; onChange: (d: number) => void }) {
@@ -535,13 +543,13 @@ function CardIconPicker({ value, onChange }: { value: string; onChange: (icon: s
 
       {tab === "generic" ? (
         <View className="flex-row flex-wrap gap-2">
-          {CARD_GENERIC_ICONS.map((icon) => (
+          {CARD_ICON_NAMES.map((icon) => (
             <TouchableOpacity
               key={icon}
               onPress={() => onChange(icon)}
               className={`w-9 h-9 rounded-lg items-center justify-center ${value === icon ? "bg-primary/15 border border-primary" : "bg-white border border-gray-200"}`}
             >
-              <Text className="text-lg">{icon}</Text>
+              <AppIcon name={icon} size={18} color={value === icon ? "#4e80f5" : "#6B7280"} />
             </TouchableOpacity>
           ))}
         </View>
@@ -583,7 +591,7 @@ function CreditCardsSection() {
   const [modalVisible, setModalVisible] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [newName, setNewName] = useState("")
-  const [newIcon, setNewIcon] = useState("💳")
+  const [newIcon, setNewIcon] = useState(DEFAULT_CARD_ICON)
   const [newLimit, setNewLimit] = useState("")
   const [newClosingDay, setNewClosingDay] = useState<number | null>(null)
   const [newDueDay, setNewDueDay] = useState<number | null>(null)
@@ -659,7 +667,7 @@ function CreditCardsSection() {
     setModalVisible(false)
     setEditingId(null)
     setNewName("")
-    setNewIcon("💳")
+    setNewIcon(DEFAULT_ACCOUNT_ICON)
     setNewLimit("")
     setNewClosingDay(null)
     setNewDueDay(null)
@@ -688,7 +696,7 @@ function CreditCardsSection() {
                     <Text className="text-sm font-medium text-gray-800">{card.name}</Text>
                     <Text className="text-xs text-gray-400 mt-0.5">
                       {t.settings.creditCards.closingInfo(card.closingDay, card.dueDay)}
-                      {account ? ` · ${account.icon} ${account.name}` : ""}
+                      {account ? ` · ${account.name}` : ""}
                     </Text>
                   </View>
                   <Text className="text-sm font-semibold text-gray-500 mr-3">
@@ -788,11 +796,11 @@ function CreditCardsSection() {
                       onPress={() => setNewAccountId(acc.id)}
                       className={`flex-row items-center px-3 py-2 border-t border-gray-100 ${newAccountId === acc.id ? "bg-primary/10" : "hover:bg-gray-50"}`}
                     >
-                      <Text className="text-base mr-2">{acc.icon}</Text>
+                      <View className="mr-2"><AppIcon name={acc.icon} size={16} color="#6B7280" /></View>
                       <Text className={`flex-1 text-sm ${newAccountId === acc.id ? "text-primary font-medium" : "text-gray-700"}`}>
                         {acc.name}
                       </Text>
-                      {newAccountId === acc.id && <Text className="text-primary font-bold">✓</Text>}
+                      {newAccountId === acc.id && <Check size={16} color="#4e80f5" strokeWidth={2.5} />}
                     </Pressable>
                   ))}
                 </View>
@@ -824,7 +832,6 @@ function CreditCardsSection() {
 
 // ─── Categories ──────────────────────────────────────────────────────────────
 
-const CATEGORY_ICONS = ["🛒", "🍔", "🍕", "☕", "🚗", "✈️", "🏥", "📚", "🎮", "👗", "💊", "🔧", "🏠", "💡", "📱", "🎬", "🎵", "🐾", "🏋️", "💰", "💵", "📈", "💼", "🎁", "⭐", "🎯", "🏦", "💎", "🌍", "📂"]
 
 const CATEGORY_COLORS = [
   "#6366f1", "#8b5cf6", "#ec4899", "#ef4444",
@@ -842,7 +849,7 @@ function CategoriesSection() {
   const [modalVisible, setModalVisible] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [newName, setNewName] = useState("")
-  const [newIcon, setNewIcon] = useState("📂")
+  const [newIcon, setNewIcon] = useState(DEFAULT_CATEGORY_ICON)
   const [newColor, setNewColor] = useState(CATEGORY_COLORS[0])
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -903,7 +910,7 @@ function CategoriesSection() {
     setModalVisible(false)
     setEditingId(null)
     setNewName("")
-    setNewIcon("📂")
+    setNewIcon(DEFAULT_CATEGORY_ICON)
     setNewColor(CATEGORY_COLORS[0])
     setSaveError(null)
   }
@@ -934,7 +941,7 @@ function CategoriesSection() {
             {filtered.map((cat, i) => (
               <View key={cat.id} className={`flex-row items-center px-4 py-3 ${i > 0 ? "border-t border-gray-100" : ""}`}>
                 <View className="w-7 h-7 rounded-lg items-center justify-center mr-3" style={{ backgroundColor: cat.color + "22" }}>
-                  <Text className="text-base">{cat.icon}</Text>
+                  <AppIcon name={cat.icon} size={16} color={cat.color} />
                 </View>
                 <View className="w-2 h-2 rounded-full mr-3" style={{ backgroundColor: cat.color }} />
                 <Text className="flex-1 text-sm font-medium text-gray-800">{cat.name}</Text>
@@ -967,13 +974,13 @@ function CategoriesSection() {
             {/* Icon */}
             <Text className="text-xs text-gray-400 uppercase font-semibold mb-2">{t.common.icon}</Text>
             <View className="flex-row flex-wrap gap-2 mb-5">
-              {CATEGORY_ICONS.map((icon) => (
+              {CATEGORY_ICON_NAMES.map((icon) => (
                 <TouchableOpacity
                   key={icon}
                   onPress={() => setNewIcon(icon)}
                   className={`w-9 h-9 rounded-lg items-center justify-center ${newIcon === icon ? "bg-primary/15 border border-primary" : "bg-gray-50 border border-gray-200"}`}
                 >
-                  <Text className="text-lg">{icon}</Text>
+                  <AppIcon name={icon} size={18} color={newIcon === icon ? "#4e80f5" : "#6B7280"} />
                 </TouchableOpacity>
               ))}
             </View>
@@ -988,7 +995,7 @@ function CategoriesSection() {
                   style={{ backgroundColor: color }}
                   className={`w-7 h-7 rounded-full items-center justify-center ${newColor === color ? "border-2 border-gray-800" : ""}`}
                 >
-                  {newColor === color && <Text className="text-white text-xs font-bold">✓</Text>}
+                  {newColor === color && <Check size={12} color="white" strokeWidth={3} />}
                 </TouchableOpacity>
               ))}
             </View>

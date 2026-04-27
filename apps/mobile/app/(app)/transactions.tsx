@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import {
+  Animated,
   ActivityIndicator,
   Alert,
   FlatList,
@@ -10,8 +11,24 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native"
+import {
+  ArrowLeftRight,
+  ArrowRight,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  Clock,
+  FileText,
+  Minus,
+  Plus,
+  RefreshCw,
+  Trash2,
+  X,
+} from "lucide-react-native"
+import { AppIcon } from "../../lib/icons"
 import { useAuth } from "../../context/auth"
 import { useProfile } from "../../hooks/useProfile"
 import { useLocale } from "../../context/locale"
@@ -27,6 +44,7 @@ type TxRow = {
   category: string
   date: string
   accountId: string | null
+  status: "confirmed" | "pending"
 }
 
 type AccountRow = {
@@ -50,6 +68,7 @@ type FormState = {
   date: string
   accountId: string
   accountName: string
+  status: "confirmed" | "pending"
   category: string
   notes: string
   recurring: boolean
@@ -120,8 +139,8 @@ function groupByDay(txs: TxRow[]) {
     .map(([day, data]) => ({
       title: fmtDateDisplay(day + "T00:00:00"),
       data,
-      totalIncome: data.filter((tx) => tx.type === "income").reduce((s, tx) => s + tx.amount, 0),
-      totalExpense: data.filter((tx) => tx.type === "expense").reduce((s, tx) => s + tx.amount, 0),
+      totalIncome: data.filter((tx) => tx.type === "income" && tx.status === "confirmed").reduce((s, tx) => s + tx.amount, 0),
+      totalExpense: data.filter((tx) => tx.type === "expense" && tx.status === "confirmed").reduce((s, tx) => s + tx.amount, 0),
     }))
 }
 
@@ -144,59 +163,24 @@ function generateBillPayments(
   })
 }
 
-function defaultForm(): FormState {
+function defaultForm(date?: Date): FormState {
+  const d = date ?? new Date()
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const isFuture = d > today
   return {
     description: "",
     amount: "",
-    date: formatDateForInput(new Date()),
+    date: formatDateForInput(d),
     accountId: "",
     accountName: "",
     category: "",
     notes: "",
     recurring: false,
     recurrence: "monthly",
-    dueDay: new Date().getDate().toString(),
+    dueDay: d.getDate().toString(),
     showNotes: false,
+    status: isFuture ? "pending" : "confirmed",
   }
-}
-
-// ─── ActionSheet ─────────────────────────────────────────────────────────────
-
-function ActionSheet({
-  visible, onSelect, onClose, t,
-}: {
-  visible: boolean
-  onSelect: (type: "expense" | "income" | "transfer") => void
-  onClose: () => void
-  t: { addTransaction: string; expense: string; income: string; transfer: string }
-}) {
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <TouchableOpacity className="flex-1 justify-end" style={{ backgroundColor: "rgba(0,0,0,0.4)" }} activeOpacity={1} onPress={onClose}>
-        <TouchableOpacity activeOpacity={1}>
-          <View className="bg-white rounded-t-3xl px-5 pt-5 pb-10">
-            <View className="w-10 h-1 bg-gray-200 rounded-full self-center mb-5" />
-            <Text className="text-base font-semibold text-gray-800 mb-4">{t.addTransaction}</Text>
-            {([
-              ["expense", t.expense, "➖", "bg-red-50", "text-red-600"],
-              ["income", t.income, "➕", "bg-green-50", "text-green-600"],
-              ["transfer", t.transfer, "↔️", "bg-blue-50", "text-blue-600"],
-            ] as const).map(([type, label, emoji, bg, textColor]) => (
-              <TouchableOpacity
-                key={type}
-                className={`flex-row items-center p-4 ${bg} rounded-2xl mb-3`}
-                onPress={() => { onSelect(type); onClose() }}
-                activeOpacity={0.8}
-              >
-                <Text className="text-2xl mr-3">{emoji}</Text>
-                <Text className={`text-base font-semibold ${textColor}`}>{label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </TouchableOpacity>
-      </TouchableOpacity>
-    </Modal>
-  )
 }
 
 // ─── Picker Modal ─────────────────────────────────────────────────────────────
@@ -212,49 +196,102 @@ function PickerModal({
   searchPlaceholder: string
 }) {
   const [search, setSearch] = useState("")
+  const { width } = useWindowDimensions()
+  const isDesktop = width >= 768
   const filtered = items.filter((i) => i.name.toLowerCase().includes(search.toLowerCase()))
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View className="flex-1 bg-white">
-        <View className="flex-row items-center px-4 py-4 border-b border-gray-100">
-          <Text className="flex-1 text-base font-semibold text-gray-900">{title}</Text>
-          <TouchableOpacity onPress={() => { setSearch(""); onClose() }}>
-            <Text className="text-primary font-semibold">Fechar</Text>
+    <Modal visible={visible} transparent={isDesktop} animationType={isDesktop ? "fade" : "slide"} onRequestClose={onClose}>
+      {isDesktop ? (
+        <TouchableOpacity
+          className="flex-1 justify-center items-center"
+          style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
+          activeOpacity={1}
+          onPress={() => { setSearch(""); onClose() }}
+        >
+          <TouchableOpacity activeOpacity={1} style={{ width: "100%", maxWidth: 420 }}>
+            <View className="bg-white rounded-2xl overflow-hidden" style={{ maxHeight: 520 }}>
+              <View className="flex-row items-center px-4 py-4 border-b border-gray-100">
+                <Text className="flex-1 text-base font-semibold text-gray-900">{title}</Text>
+                <TouchableOpacity onPress={() => { setSearch(""); onClose() }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <X size={20} color="#9CA3AF" />
+                </TouchableOpacity>
+              </View>
+              <View className="px-4 py-2 border-b border-gray-100">
+                <TextInput
+                  className="bg-gray-50 rounded-xl px-3 py-2.5 text-sm text-gray-800"
+                  placeholder={searchPlaceholder}
+                  value={search}
+                  onChangeText={setSearch}
+                  autoFocus
+                />
+              </View>
+              <FlatList
+                data={filtered}
+                keyExtractor={(i) => i.id}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    className="flex-row items-center px-4 py-3.5 border-b border-gray-50"
+                    onPress={() => { onSelect(item.id, item.name); setSearch(""); onClose() }}
+                    activeOpacity={0.7}
+                  >
+                    {item.icon ? (
+                      <View
+                        className="w-9 h-9 rounded-full items-center justify-center mr-3"
+                        style={{ backgroundColor: item.color ?? "#E5E7EB" }}
+                      >
+                        <AppIcon name={item.icon} size={16} color={item.color ? "white" : "#6B7280"} />
+                      </View>
+                    ) : null}
+                    <Text className="text-sm font-medium text-gray-800">{item.name}</Text>
+                  </TouchableOpacity>
+                )}
+                keyboardShouldPersistTaps="handled"
+              />
+            </View>
           </TouchableOpacity>
-        </View>
-        <View className="px-4 py-2 border-b border-gray-100">
-          <TextInput
-            className="bg-gray-50 rounded-xl px-3 py-2.5 text-sm text-gray-800"
-            placeholder={searchPlaceholder}
-            value={search}
-            onChangeText={setSearch}
-            autoFocus
+        </TouchableOpacity>
+      ) : (
+        <View className="flex-1 bg-white">
+          <View className="flex-row items-center px-4 py-4 border-b border-gray-100">
+            <Text className="flex-1 text-base font-semibold text-gray-900">{title}</Text>
+            <TouchableOpacity onPress={() => { setSearch(""); onClose() }}>
+              <Text className="text-primary font-semibold">Fechar</Text>
+            </TouchableOpacity>
+          </View>
+          <View className="px-4 py-2 border-b border-gray-100">
+            <TextInput
+              className="bg-gray-50 rounded-xl px-3 py-2.5 text-sm text-gray-800"
+              placeholder={searchPlaceholder}
+              value={search}
+              onChangeText={setSearch}
+              autoFocus
+            />
+          </View>
+          <FlatList
+            data={filtered}
+            keyExtractor={(i) => i.id}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                className="flex-row items-center px-4 py-3.5 border-b border-gray-50"
+                onPress={() => { onSelect(item.id, item.name); setSearch(""); onClose() }}
+                activeOpacity={0.7}
+              >
+                {item.icon ? (
+                  <View
+                    className="w-9 h-9 rounded-full items-center justify-center mr-3"
+                    style={{ backgroundColor: item.color ?? "#E5E7EB" }}
+                  >
+                    <Text style={{ fontSize: 16 }}>{item.icon}</Text>
+                  </View>
+                ) : null}
+                <Text className="text-sm font-medium text-gray-800">{item.name}</Text>
+              </TouchableOpacity>
+            )}
+            keyboardShouldPersistTaps="handled"
           />
         </View>
-        <FlatList
-          data={filtered}
-          keyExtractor={(i) => i.id}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              className="flex-row items-center px-4 py-3.5 border-b border-gray-50"
-              onPress={() => { onSelect(item.id, item.name); setSearch(""); onClose() }}
-              activeOpacity={0.7}
-            >
-              {item.icon ? (
-                <View
-                  className="w-9 h-9 rounded-full items-center justify-center mr-3"
-                  style={{ backgroundColor: item.color ?? "#E5E7EB" }}
-                >
-                  <Text style={{ fontSize: 16 }}>{item.icon}</Text>
-                </View>
-              ) : null}
-              <Text className="text-sm font-medium text-gray-800">{item.name}</Text>
-            </TouchableOpacity>
-          )}
-          keyboardShouldPersistTaps="handled"
-        />
-      </View>
+      )}
     </Modal>
   )
 }
@@ -279,6 +316,8 @@ function TransactionFormModal({
   const [saving, setSaving] = useState(false)
   const [showAccountPicker, setShowAccountPicker] = useState(false)
   const [showCategoryPicker, setShowCategoryPicker] = useState(false)
+  const { width } = useWindowDimensions()
+  const isDesktop = width >= 768
 
   useEffect(() => {
     if (visible && editTx) {
@@ -295,6 +334,7 @@ function TransactionFormModal({
         recurrence: "monthly",
         dueDay: "",
         showNotes: false,
+        status: editTx.status,
       })
     } else if (visible && !editTx) {
       setForm(defaultForm())
@@ -329,32 +369,53 @@ function TransactionFormModal({
             category: form.category,
             accountId: form.accountId,
             date: date.toISOString(),
+            status: form.status,
           })
           .eq("id", editTx.id)
         if (txError) throw new Error(txError.message)
 
-        // Adjust balances: reverse old impact, apply new impact
-        if (editTx.accountId === form.accountId) {
-          // Same account — one read-modify-write
-          const { data: acc, error } = await supabase
-            .from("Account").select("balance").eq("id", form.accountId).single()
-          if (error) throw new Error(error.message)
-          const reverse = editTx.type === "income" ? -editTx.amount : editTx.amount
-          const apply = type === "income" ? amount : -amount
-          await supabase.from("Account")
-            .update({ balance: Number(acc!.balance) + reverse + apply })
-            .eq("id", form.accountId)
-        } else {
-          // Different accounts
-          if (editTx.accountId) {
-            const { data: old } = await supabase.from("Account").select("balance").eq("id", editTx.accountId).single()
+        const wasConfirmed = editTx.status === "confirmed"
+        const nowConfirmed = form.status === "confirmed"
+
+        if (wasConfirmed && nowConfirmed) {
+          // Both confirmed: reverse old impact, apply new impact
+          if (editTx.accountId === form.accountId) {
+            const { data: acc, error } = await supabase
+              .from("Account").select("balance").eq("id", form.accountId).single()
+            if (error) throw new Error(error.message)
             const reverse = editTx.type === "income" ? -editTx.amount : editTx.amount
-            await supabase.from("Account").update({ balance: Number(old!.balance) + reverse }).eq("id", editTx.accountId)
+            const apply = type === "income" ? amount : -amount
+            await supabase.from("Account")
+              .update({ balance: Number(acc!.balance) + reverse + apply })
+              .eq("id", form.accountId)
+          } else {
+            if (editTx.accountId) {
+              const { data: old } = await supabase.from("Account").select("balance").eq("id", editTx.accountId).single()
+              const reverse = editTx.type === "income" ? -editTx.amount : editTx.amount
+              await supabase.from("Account").update({ balance: Number(old!.balance) + reverse }).eq("id", editTx.accountId)
+            }
+            const { data: next } = await supabase.from("Account").select("balance").eq("id", form.accountId).single()
+            const apply = type === "income" ? amount : -amount
+            await supabase.from("Account").update({ balance: Number(next!.balance) + apply }).eq("id", form.accountId)
           }
-          const { data: next } = await supabase.from("Account").select("balance").eq("id", form.accountId).single()
-          const apply = type === "income" ? amount : -amount
-          await supabase.from("Account").update({ balance: Number(next!.balance) + apply }).eq("id", form.accountId)
+        } else if (wasConfirmed && !nowConfirmed) {
+          // Confirmed → Pending: reverse old impact only
+          if (editTx.accountId) {
+            const { data: acc } = await supabase.from("Account").select("balance").eq("id", editTx.accountId).single()
+            if (acc) {
+              const reverse = editTx.type === "income" ? -editTx.amount : editTx.amount
+              await supabase.from("Account").update({ balance: Number(acc.balance) + reverse }).eq("id", editTx.accountId)
+            }
+          }
+        } else if (!wasConfirmed && nowConfirmed) {
+          // Pending → Confirmed: apply new impact only
+          const { data: acc } = await supabase.from("Account").select("balance").eq("id", form.accountId).single()
+          if (acc) {
+            const apply = type === "income" ? amount : -amount
+            await supabase.from("Account").update({ balance: Number(acc.balance) + apply }).eq("id", form.accountId)
+          }
         }
+        // Pending → Pending: no balance change
       } else {
         // ── Create mode ──
         const { error: txError } = await supabase.from("Transaction").insert({
@@ -366,17 +427,21 @@ function TransactionFormModal({
           category: form.category,
           accountId: form.accountId,
           date: date.toISOString(),
+          status: form.status,
         })
         if (txError) throw new Error(txError.message)
 
-        const { data: acc, error: accError } = await supabase
-          .from("Account").select("balance").eq("id", form.accountId).single()
-        if (accError) throw new Error(accError.message)
-        if (acc) {
-          const delta = type === "income" ? amount : -amount
-          const { error: balError } = await supabase
-            .from("Account").update({ balance: Number(acc.balance) + delta }).eq("id", form.accountId)
-          if (balError) throw new Error(balError.message)
+        // Only update balance for confirmed transactions
+        if (form.status === "confirmed") {
+          const { data: acc, error: accError } = await supabase
+            .from("Account").select("balance").eq("id", form.accountId).single()
+          if (accError) throw new Error(accError.message)
+          if (acc) {
+            const delta = type === "income" ? amount : -amount
+            const { error: balError } = await supabase
+              .from("Account").update({ balance: Number(acc.balance) + delta }).eq("id", form.accountId)
+            if (balError) throw new Error(balError.message)
+          }
         }
 
         if (form.recurring) {
@@ -424,21 +489,24 @@ function TransactionFormModal({
   const amountColor = type === "income" ? "text-green-600" : "text-red-500"
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType={isDesktop ? "fade" : "slide"} onRequestClose={onClose}>
       <KeyboardAvoidingView
-        className="flex-1 justify-end"
+        className={`flex-1 ${isDesktop ? "justify-center items-center" : "justify-end"}`}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
       >
-        <View className="bg-white rounded-t-3xl">
-          {/* Handle */}
-          <View className="w-10 h-1 bg-gray-200 rounded-full self-center mt-3 mb-1" />
+        <View
+          className={`bg-white ${isDesktop ? "rounded-2xl" : "rounded-t-3xl"}`}
+          style={isDesktop ? { width: "100%", maxWidth: 480 } : undefined}
+        >
+          {/* Handle — mobile only */}
+          {!isDesktop && <View className="w-10 h-1 bg-gray-200 rounded-full self-center mt-3 mb-1" />}
 
           {/* Header */}
           <View className="flex-row items-center px-5 py-3 border-b border-gray-100">
             <Text className="flex-1 text-base font-semibold text-gray-900">{title}</Text>
             <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Text className="text-2xl text-gray-400 leading-none">×</Text>
+              <X size={20} color="#9CA3AF" />
             </TouchableOpacity>
           </View>
 
@@ -486,7 +554,7 @@ function TransactionFormModal({
                 <Text className="flex-1 text-sm text-gray-700" numberOfLines={1}>
                   {form.accountName || t.accountLabel}
                 </Text>
-                <Text className="text-gray-400 text-xs ml-1">▾</Text>
+                <ChevronDown size={14} color="#9CA3AF" />
               </TouchableOpacity>
               <TouchableOpacity
                 className="flex-1 bg-gray-50 rounded-xl px-3 py-3 flex-row items-center"
@@ -496,9 +564,26 @@ function TransactionFormModal({
                 <Text className="flex-1 text-sm text-gray-700" numberOfLines={1}>
                   {form.category || t.categoryLabel}
                 </Text>
-                <Text className="text-gray-400 text-xs ml-1">▾</Text>
+                <ChevronDown size={14} color="#9CA3AF" />
               </TouchableOpacity>
             </View>
+
+            {/* Status toggle */}
+            <TouchableOpacity
+              className={`flex-row items-center self-start px-4 py-2.5 rounded-xl gap-2 mb-2 ${
+                form.status === "confirmed" ? "bg-green-50" : "bg-amber-50"
+              }`}
+              onPress={() => patch("status", form.status === "confirmed" ? "pending" : "confirmed")}
+              activeOpacity={0.8}
+            >
+              {form.status === "confirmed"
+                ? <CheckCircle2 size={16} color="#16A34A" />
+                : <Clock size={16} color="#D97706" />
+              }
+              <Text className={`text-xs font-semibold ${form.status === "confirmed" ? "text-green-600" : "text-amber-600"}`}>
+                {form.status === "confirmed" ? t.statusConfirmed : t.statusPending}
+              </Text>
+            </TouchableOpacity>
 
             {/* Action toggles */}
             <View className="flex-row gap-3 mb-2">
@@ -507,7 +592,7 @@ function TransactionFormModal({
                 onPress={() => patch("recurring", !form.recurring)}
                 activeOpacity={0.8}
               >
-                <Text className="text-base">🔄</Text>
+                <RefreshCw size={15} color={form.recurring ? "#4e80f5" : "#6B7280"} />
                 <Text className={`text-xs font-medium ${form.recurring ? "text-primary" : "text-gray-500"}`}>
                   {t.recurringLabel}
                 </Text>
@@ -517,7 +602,7 @@ function TransactionFormModal({
                 onPress={() => patch("showNotes", !form.showNotes)}
                 activeOpacity={0.8}
               >
-                <Text className="text-base">📝</Text>
+                <FileText size={15} color={form.showNotes ? "#4e80f5" : "#6B7280"} />
                 <Text className={`text-xs font-medium ${form.showNotes ? "text-primary" : "text-gray-500"}`}>
                   {t.notesLabel}
                 </Text>
@@ -578,11 +663,7 @@ function TransactionFormModal({
               disabled={saving}
               activeOpacity={0.85}
             >
-              {saving ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <Text className="text-white text-3xl leading-none" style={{ marginTop: -2 }}>✓</Text>
-              )}
+              {saving ? <ActivityIndicator color="white" /> : <Check size={28} color="white" strokeWidth={2.5} />}
             </TouchableOpacity>
           </View>
         </View>
@@ -632,6 +713,8 @@ function TransferFormModal({
   const [saving, setSaving] = useState(false)
   const [showFromPicker, setShowFromPicker] = useState(false)
   const [showToPicker, setShowToPicker] = useState(false)
+  const { width } = useWindowDimensions()
+  const isDesktop = width >= 768
 
   function reset() {
     setFromId(""); setFromName(""); setToId(""); setToName("")
@@ -691,18 +774,21 @@ function TransferFormModal({
   }
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType={isDesktop ? "fade" : "slide"} onRequestClose={onClose}>
       <KeyboardAvoidingView
-        className="flex-1 justify-end"
+        className={`flex-1 ${isDesktop ? "justify-center items-center" : "justify-end"}`}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
       >
-        <View className="bg-white rounded-t-3xl">
-          <View className="w-10 h-1 bg-gray-200 rounded-full self-center mt-3 mb-1" />
+        <View
+          className={`bg-white ${isDesktop ? "rounded-2xl" : "rounded-t-3xl"}`}
+          style={isDesktop ? { width: "100%", maxWidth: 480 } : undefined}
+        >
+          {!isDesktop && <View className="w-10 h-1 bg-gray-200 rounded-full self-center mt-3 mb-1" />}
           <View className="flex-row items-center px-5 py-3 border-b border-gray-100">
             <Text className="flex-1 text-base font-semibold text-gray-900">{t.newTransfer}</Text>
             <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Text className="text-2xl text-gray-400 leading-none">×</Text>
+              <X size={20} color="#9CA3AF" />
             </TouchableOpacity>
           </View>
 
@@ -717,10 +803,10 @@ function TransferFormModal({
                 <Text className="flex-1 text-sm text-gray-700" numberOfLines={1}>
                   {fromName || t.fromAccount}
                 </Text>
-                <Text className="text-gray-400 text-xs">▾</Text>
+                <ChevronDown size={14} color="#9CA3AF" />
               </TouchableOpacity>
               <View className="items-center justify-center px-1">
-                <Text className="text-gray-400">→</Text>
+                <ArrowRight size={16} color="#9CA3AF" />
               </View>
               <TouchableOpacity
                 className="flex-1 bg-gray-50 rounded-xl px-3 py-3 flex-row items-center"
@@ -730,7 +816,7 @@ function TransferFormModal({
                 <Text className="flex-1 text-sm text-gray-700" numberOfLines={1}>
                   {toName || t.toAccount}
                 </Text>
-                <Text className="text-gray-400 text-xs">▾</Text>
+                <ChevronDown size={14} color="#9CA3AF" />
               </TouchableOpacity>
             </View>
 
@@ -774,11 +860,7 @@ function TransferFormModal({
               disabled={saving}
               activeOpacity={0.85}
             >
-              {saving ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <Text className="text-white text-3xl leading-none" style={{ marginTop: -2 }}>✓</Text>
-              )}
+              {saving ? <ActivityIndicator color="white" /> : <Check size={28} color="white" strokeWidth={2.5} />}
             </TouchableOpacity>
           </View>
         </View>
@@ -818,9 +900,36 @@ export default function TransactionsScreen() {
   const [overdueCount, setOverdueCount] = useState(0)
   const [loading, setLoading] = useState(false)
   const [filter, setFilter] = useState("")
-  const [showActionSheet, setShowActionSheet] = useState(false)
+  const [fabOpen, setFabOpen] = useState(false)
   const [formType, setFormType] = useState<"expense" | "income" | "transfer" | null>(null)
   const [editingTx, setEditingTx] = useState<TxRow | null>(null)
+
+  const fabAnim = useRef(new Animated.Value(0)).current
+  const itemAnims = useRef([
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0),
+  ]).current
+
+  function openFab() {
+    setFabOpen(true)
+    Animated.parallel([
+      Animated.timing(fabAnim, { toValue: 1, duration: 220, useNativeDriver: true }),
+      Animated.stagger(55, [...itemAnims].reverse().map((a) =>
+        Animated.spring(a, { toValue: 1, tension: 160, friction: 9, useNativeDriver: true })
+      )),
+    ]).start()
+  }
+
+  function closeFab(cb?: () => void) {
+    setFabOpen(false)
+    Animated.parallel([
+      Animated.timing(fabAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
+      ...itemAnims.map((a) =>
+        Animated.timing(a, { toValue: 0, duration: 140, useNativeDriver: true })
+      ),
+    ]).start(cb)
+  }
 
   const currency = profile?.currency ?? "EUR"
   const uid = session?.user?.id ?? ""
@@ -845,7 +954,7 @@ export default function TransactionsScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              if (tx.accountId) {
+              if (tx.accountId && tx.status === "confirmed") {
                 const { data: acc } = await supabase.from("Account").select("balance").eq("id", tx.accountId).single()
                 if (acc) {
                   const reverse = tx.type === "income" ? -tx.amount : tx.amount
@@ -865,13 +974,39 @@ export default function TransactionsScreen() {
     )
   }
 
+  async function handleConfirm(tx: TxRow) {
+    try {
+      const { error: txError } = await supabase
+        .from("Transaction")
+        .update({ status: "confirmed" })
+        .eq("id", tx.id)
+      if (txError) throw new Error(txError.message)
+
+      if (tx.accountId) {
+        const { data: acc, error: accError } = await supabase
+          .from("Account").select("balance").eq("id", tx.accountId).single()
+        if (accError) throw new Error(accError.message)
+        if (acc) {
+          const delta = tx.type === "income" ? tx.amount : -tx.amount
+          const { error: balError } = await supabase
+            .from("Account").update({ balance: Number(acc.balance) + delta }).eq("id", tx.accountId)
+          if (balError) throw new Error(balError.message)
+        }
+      }
+      fetchTransactions()
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Não foi possível confirmar."
+      Alert.alert("Erro ao confirmar", msg)
+    }
+  }
+
   async function fetchTransactions() {
     if (!uid) return
     setLoading(true)
     const { from, to } = getMonthRange(currentDate)
     const { data, error } = await supabase
       .from("Transaction")
-      .select("id, type, amount, description, category, date, accountId")
+      .select("id, type, amount, description, category, date, accountId, status")
       .eq("userId", uid)
       .gte("date", from)
       .lte("date", to)
@@ -1014,19 +1149,28 @@ export default function TransactionsScreen() {
             const cat = categoryMap[item.category]
             const acc = item.accountId ? accountMap[item.accountId] : null
             const isLast = index === section.data.length - 1
+            const isPending = item.status === "pending"
             return (
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={() => setEditingTx(item)}
+                style={{ opacity: isPending ? 0.6 : 1 }}
                 className={`flex-row items-center bg-white px-3 py-3 ${
                   index === 0 ? "rounded-t-2xl" : ""
                 } ${isLast ? "rounded-b-2xl" : "border-b border-gray-50"}`}
               >
-                <View
-                  className="w-10 h-10 rounded-full items-center justify-center mr-3 flex-shrink-0"
-                  style={{ backgroundColor: cat?.color ?? "#E5E7EB" }}
-                >
-                  <Text style={{ fontSize: 18 }}>{cat?.icon ?? "📂"}</Text>
+                <View className="relative mr-3 flex-shrink-0">
+                  <View
+                    className="w-10 h-10 rounded-full items-center justify-center"
+                    style={{ backgroundColor: cat?.color ?? "#E5E7EB" }}
+                  >
+                    <AppIcon name={cat?.icon ?? "FolderOpen"} size={18} color="white" />
+                  </View>
+                  {isPending && (
+                    <View className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-amber-400 rounded-full items-center justify-center">
+                      <Clock size={9} color="white" strokeWidth={3} />
+                    </View>
+                  )}
                 </View>
                 <View className="flex-1 min-w-0">
                   <Text className="text-sm font-medium text-gray-800" numberOfLines={1}>
@@ -1039,13 +1183,23 @@ export default function TransactionsScreen() {
                 <Text className={`text-sm font-semibold ml-3 ${item.type === "income" ? "text-green-600" : "text-gray-800"}`}>
                   {item.type === "income" ? "+" : "−"}{fmt(item.amount, currency)}
                 </Text>
+                {isPending && (
+                  <TouchableOpacity
+                    onPress={(e) => { e.stopPropagation(); handleConfirm(item) }}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    className="ml-2 pl-1"
+                    activeOpacity={0.6}
+                  >
+                    <Check size={16} color="#FBBF24" strokeWidth={2.5} />
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity
                   onPress={(e) => { e.stopPropagation(); handleDelete(item) }}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  className="ml-3 pl-1"
+                  className="ml-2 pl-1"
                   activeOpacity={0.6}
                 >
-                  <Text className="text-gray-300 text-base">🗑</Text>
+                  <Trash2 size={16} color="#D1D5DB" />
                 </TouchableOpacity>
               </TouchableOpacity>
             )
@@ -1053,22 +1207,58 @@ export default function TransactionsScreen() {
         />
       )}
 
-      {/* FAB */}
-      <TouchableOpacity
-        className="absolute bottom-8 right-5 w-14 h-14 bg-primary rounded-full items-center justify-center shadow-lg"
-        onPress={() => setShowActionSheet(true)}
-        activeOpacity={0.85}
+      {/* Speed Dial backdrop */}
+      <Animated.View
+        pointerEvents={fabOpen ? "auto" : "none"}
+        className="absolute inset-0"
+        style={{ opacity: fabAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 0.35] }), backgroundColor: "#000" }}
       >
-        <Text className="text-white text-3xl leading-none" style={{ marginTop: -2 }}>+</Text>
-      </TouchableOpacity>
+        <TouchableOpacity className="flex-1" activeOpacity={1} onPress={() => closeFab()} />
+      </Animated.View>
 
-      {/* Action Sheet */}
-      <ActionSheet
-        visible={showActionSheet}
-        onSelect={(type) => setFormType(type)}
-        onClose={() => setShowActionSheet(false)}
-        t={t.transactions}
-      />
+      {/* Speed Dial FAB */}
+      <View className="absolute bottom-8 right-5 items-end" pointerEvents="box-none">
+        {([
+          ["transfer", t.transactions.transfer, ArrowLeftRight, "#3B82F6", itemAnims[2]],
+          ["income",   t.transactions.income,   Plus,           "#22C55E", itemAnims[1]],
+          ["expense",  t.transactions.expense,  Minus,          "#EF4444", itemAnims[0]],
+        ] as const).map(([type, label, Icon, color, anim]) => (
+          <Animated.View
+            key={type}
+            pointerEvents={fabOpen ? "auto" : "none"}
+            style={{
+              opacity: anim,
+              marginBottom: 12,
+              transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }],
+            }}
+          >
+            <TouchableOpacity
+              className="flex-row items-center"
+              onPress={() => closeFab(() => setFormType(type))}
+              activeOpacity={0.85}
+            >
+              <View className="bg-white rounded-xl px-3 py-1.5 mr-3 shadow">
+                <Text className="text-sm font-medium text-gray-700">{label}</Text>
+              </View>
+              <View className="w-12 h-12 rounded-full items-center justify-center shadow" style={{ backgroundColor: color }}>
+                <Icon size={22} color="white" strokeWidth={2} />
+              </View>
+            </TouchableOpacity>
+          </Animated.View>
+        ))}
+
+        <TouchableOpacity
+          className="w-14 h-14 bg-primary rounded-full items-center justify-center shadow-lg"
+          onPress={fabOpen ? () => closeFab() : openFab}
+          activeOpacity={0.85}
+        >
+          <Animated.View
+            style={{ transform: [{ rotate: fabAnim.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "45deg"] }) }] }}
+          >
+            <Plus size={28} color="white" strokeWidth={2} />
+          </Animated.View>
+        </TouchableOpacity>
+      </View>
 
       {/* Expense / Income form */}
       {(formType === "expense" || formType === "income") && (

@@ -165,6 +165,9 @@ const pt: Dictionary = {
     validationError: "Campos obrigatórios",
     validationErrorMsg: "Preenche a descrição, valor, data, conta e categoria.",
     recurringCreated: "Recorrência criada com sucesso.",
+    statusConfirmed: "Realizado",
+    statusPending: "Pendente",
+    confirmAction: "Confirmar",
   },
   overview: {
     greeting: (name) => `Olá, ${name}`,

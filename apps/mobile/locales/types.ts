@@ -161,6 +161,9 @@ export type Dictionary = {
     validationError: string
     validationErrorMsg: string
     recurringCreated: string
+    statusConfirmed: string
+    statusPending: string
+    confirmAction: string
   }
   overview: {
     greeting: (name: string) => string

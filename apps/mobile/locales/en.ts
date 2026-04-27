@@ -165,6 +165,9 @@ const en: Dictionary = {
     validationError: "Required fields",
     validationErrorMsg: "Please fill in description, amount, date, account and category.",
     recurringCreated: "Recurring schedule created.",
+    statusConfirmed: "Confirmed",
+    statusPending: "Pending",
+    confirmAction: "Confirm",
   },
   overview: {
     greeting: (name) => `Hello, ${name}`,
