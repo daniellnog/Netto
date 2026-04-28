@@ -118,13 +118,14 @@ function DonutChart({ data }: { data: CategorySpending[] }) {
 
   if (total === 0) return <View style={{ width: size, height: size }} />
 
-  let startDeg = 0
-  const segments = data.map((item, i) => {
-    const sweep = (item.total / total) * 360
-    const path = segmentPath(cx, cy, outerR, innerR, startDeg + GAP / 2, startDeg + sweep - GAP / 2)
-    startDeg += sweep
-    return { path, color: CATEGORY_COLORS[i] }
-  })
+  const segments = data.reduce<{ list: { path: string; color: string }[]; deg: number }>(
+    (acc, item, i) => {
+      const sweep = (item.total / total) * 360
+      const path = segmentPath(cx, cy, outerR, innerR, acc.deg + GAP / 2, acc.deg + sweep - GAP / 2)
+      return { list: [...acc.list, { path, color: CATEGORY_COLORS[i] }], deg: acc.deg + sweep }
+    },
+    { list: [], deg: 0 }
+  ).list
 
   return (
     <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>

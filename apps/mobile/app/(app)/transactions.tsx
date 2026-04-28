@@ -339,7 +339,7 @@ function TransactionFormModal({
     } else if (visible && !editTx) {
       setForm(defaultForm())
     }
-  }, [visible, editTx])
+  }, [visible, editTx, accounts])
 
   const filteredCategories = categories
     .filter((c) => c.type === type)
@@ -1049,10 +1049,12 @@ export default function TransactionsScreen() {
       .then(({ count }) => setOverdueCount(count ?? 0))
 
     fetchTransactions()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uid])
 
   useEffect(() => {
     fetchTransactions()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentDate])
 
   const filtered = useMemo(() => {
