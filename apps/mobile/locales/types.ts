@@ -160,10 +160,25 @@ export type Dictionary = {
     selectCategory: string
     validationError: string
     validationErrorMsg: string
+    transferValidationMsg: string
+    transferSameAccountError: string
     recurringCreated: string
     statusConfirmed: string
     statusPending: string
     confirmAction: string
+    searchAccountPlaceholder: string
+    searchPlaceholder: string
+    datePlaceholder: string
+    close: string
+    deleteTitle: string
+    deleteConfirmMsg: (name: string) => string
+    errorSave: string
+    errorSaveMsg: string
+    errorSaveMsgTransfer: string
+    errorDeleteMsg: string
+    errorConfirm: string
+    errorConfirmMsg: string
+    errorLoad: string
   }
   overview: {
     greeting: (name: string) => string

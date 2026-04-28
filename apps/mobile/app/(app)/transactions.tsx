@@ -186,7 +186,7 @@ function defaultForm(date?: Date): FormState {
 // ─── Picker Modal ─────────────────────────────────────────────────────────────
 
 function PickerModal({
-  visible, title, items, onSelect, onClose, searchPlaceholder,
+  visible, title, items, onSelect, onClose, searchPlaceholder, closeLabel,
 }: {
   visible: boolean
   title: string
@@ -194,6 +194,7 @@ function PickerModal({
   onSelect: (id: string, name: string) => void
   onClose: () => void
   searchPlaceholder: string
+  closeLabel: string
 }) {
   const [search, setSearch] = useState("")
   const { width } = useWindowDimensions()
@@ -256,7 +257,7 @@ function PickerModal({
           <View className="flex-row items-center px-4 py-4 border-b border-gray-100">
             <Text className="flex-1 text-base font-semibold text-gray-900">{title}</Text>
             <TouchableOpacity onPress={() => { setSearch(""); onClose() }}>
-              <Text className="text-primary font-semibold">Fechar</Text>
+              <Text className="text-primary font-semibold">{closeLabel}</Text>
             </TouchableOpacity>
           </View>
           <View className="px-4 py-2 border-b border-gray-100">
@@ -296,6 +297,137 @@ function PickerModal({
   )
 }
 
+// ─── Dropdown Picker ──────────────────────────────────────────────────────────
+
+function DropdownPicker({
+  value, placeholder, items, onSelect, searchPlaceholder,
+}: {
+  value: string
+  placeholder: string
+  items: { id: string; name: string; icon?: string; color?: string }[]
+  onSelect: (id: string, name: string) => void
+  searchPlaceholder: string
+}) {
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState("")
+  const { t } = useLocale()
+  const { width } = useWindowDimensions()
+  const isDesktop = width >= 768
+  const filtered = items.filter((i) => i.name.toLowerCase().includes(search.toLowerCase()))
+
+  function handleSelect(id: string, name: string) {
+    onSelect(id, name)
+    setOpen(false)
+    setSearch("")
+  }
+
+  // Mobile: full-screen modal
+  if (!isDesktop) {
+    return (
+      <>
+        <TouchableOpacity
+          className="flex-1 bg-gray-50 rounded-xl px-3 py-3 flex-row items-center"
+          onPress={() => setOpen(true)}
+          activeOpacity={0.8}
+        >
+          <Text className="flex-1 text-sm text-gray-700" numberOfLines={1}>
+            {value || placeholder}
+          </Text>
+          <ChevronDown size={14} color="#9CA3AF" />
+        </TouchableOpacity>
+        <PickerModal
+          visible={open}
+          title={placeholder}
+          items={items}
+          onSelect={handleSelect}
+          onClose={() => { setOpen(false); setSearch("") }}
+          searchPlaceholder={searchPlaceholder}
+          closeLabel={t.transactions.close}
+        />
+      </>
+    )
+  }
+
+  // Desktop: absolute dropdown above sibling elements
+  return (
+    <View className="flex-1" style={{ zIndex: open ? 999 : 1 }}>
+      <TouchableOpacity
+        className={`bg-gray-50 rounded-xl px-3 py-3 flex-row items-center ${open ? "border border-primary/40" : ""}`}
+        onPress={() => setOpen((o) => !o)}
+        activeOpacity={0.8}
+      >
+        <Text className="flex-1 text-sm text-gray-700" numberOfLines={1}>
+          {value || placeholder}
+        </Text>
+        <ChevronDown size={14} color={open ? "#4e80f5" : "#9CA3AF"} />
+      </TouchableOpacity>
+
+      {open && (
+        <View
+          className="absolute bg-white rounded-xl border border-gray-100"
+          style={{
+            top: "100%",
+            left: 0,
+            right: 0,
+            marginTop: 4,
+            maxHeight: 200,
+            zIndex: 999,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.12,
+            shadowRadius: 12,
+            elevation: 16,
+          }}
+        >
+          <View className="px-3 py-2 border-b border-gray-100">
+            <TextInput
+              className="text-sm text-gray-800"
+              placeholder={searchPlaceholder}
+              placeholderTextColor="#9CA3AF"
+              value={search}
+              onChangeText={setSearch}
+              autoFocus
+            />
+          </View>
+          {/* @ts-ignore – overflow:'scroll' renders as CSS in React Native Web, avoiding ScrollView gesture interception */}
+          <View style={{ overflow: "scroll" }}>
+            {filtered.map((item) => (
+              <View
+                key={item.id}
+                // @ts-ignore – onClick and cursor pass through to the underlying div in React Native Web
+                onClick={() => handleSelect(item.id, item.name)}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  borderBottomWidth: 1,
+                  borderBottomColor: "#F9FAFB",
+                  cursor: "pointer",
+                }}
+              >
+                {item.icon ? (
+                  <View
+                    style={{
+                      width: 28, height: 28, borderRadius: 14,
+                      alignItems: "center", justifyContent: "center",
+                      marginRight: 8, flexShrink: 0,
+                      backgroundColor: item.color ?? "#E5E7EB",
+                    }}
+                  >
+                    <AppIcon name={item.icon} size={14} color={item.color ? "white" : "#6B7280"} />
+                  </View>
+                ) : null}
+                <Text style={{ fontSize: 14, color: "#1F2937", flex: 1 }}>{item.name}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+    </View>
+  )
+}
+
 // ─── Transaction Form Modal ───────────────────────────────────────────────────
 
 function TransactionFormModal({
@@ -314,8 +446,6 @@ function TransactionFormModal({
 }) {
   const [form, setForm] = useState<FormState>(defaultForm)
   const [saving, setSaving] = useState(false)
-  const [showAccountPicker, setShowAccountPicker] = useState(false)
-  const [showCategoryPicker, setShowCategoryPicker] = useState(false)
   const { width } = useWindowDimensions()
   const isDesktop = width >= 768
 
@@ -447,7 +577,7 @@ function TransactionFormModal({
         if (form.recurring) {
           const dueDay =
             form.recurrence === "monthly"
-              ? parseInt(form.dueDay) || date.getDate()
+              ? date.getDate()
               : undefined
           const { data: bill, error: billError } = await supabase
             .from("Bill")
@@ -478,8 +608,8 @@ function TransactionFormModal({
       onSaved()
       onClose()
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Não foi possível guardar a transação."
-      Alert.alert("Erro ao guardar", msg)
+      const msg = e instanceof Error ? e.message : t.errorSaveMsg
+      Alert.alert(t.errorSave, msg)
     } finally {
       setSaving(false)
     }
@@ -510,7 +640,7 @@ function TransactionFormModal({
             </TouchableOpacity>
           </View>
 
-          <View className="px-5 pt-4 pb-2">
+          <View className="px-5 pt-4 pb-2" style={{ zIndex: 1 }}>
             {/* Description */}
             <TextInput
               className="bg-gray-50 rounded-xl px-3 py-3 text-sm text-gray-800 mb-3"
@@ -535,7 +665,7 @@ function TransactionFormModal({
               <View className="flex-1 bg-gray-50 rounded-xl px-3 py-3 flex-row items-center">
                 <TextInput
                   className="flex-1 text-sm text-gray-700"
-                  placeholder="DD/MM/AAAA"
+                  placeholder={t.datePlaceholder}
                   value={form.date}
                   onChangeText={(v) => patch("date", v)}
                   keyboardType="numeric"
@@ -545,48 +675,40 @@ function TransactionFormModal({
             </View>
 
             {/* Account + Category */}
-            <View className="flex-row gap-3 mb-3">
-              <TouchableOpacity
-                className="flex-1 bg-gray-50 rounded-xl px-3 py-3 flex-row items-center"
-                onPress={() => setShowAccountPicker(true)}
-                activeOpacity={0.8}
-              >
-                <Text className="flex-1 text-sm text-gray-700" numberOfLines={1}>
-                  {form.accountName || t.accountLabel}
-                </Text>
-                <ChevronDown size={14} color="#9CA3AF" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                className="flex-1 bg-gray-50 rounded-xl px-3 py-3 flex-row items-center"
-                onPress={() => setShowCategoryPicker(true)}
-                activeOpacity={0.8}
-              >
-                <Text className="flex-1 text-sm text-gray-700" numberOfLines={1}>
-                  {form.category || t.categoryLabel}
-                </Text>
-                <ChevronDown size={14} color="#9CA3AF" />
-              </TouchableOpacity>
+            <View className="flex-row gap-3 mb-3" style={{ zIndex: 10 }}>
+              <DropdownPicker
+                value={form.accountName}
+                placeholder={t.accountLabel}
+                items={accounts.map((a) => ({ id: a.id, name: a.name, icon: a.icon }))}
+                onSelect={(id, name) => { patch("accountId", id); patch("accountName", name) }}
+                searchPlaceholder={t.searchAccountPlaceholder}
+              />
+              <DropdownPicker
+                value={form.category}
+                placeholder={t.categoryLabel}
+                items={filteredCategories}
+                onSelect={(_, name) => patch("category", name)}
+                searchPlaceholder={t.categorySearchPlaceholder}
+              />
             </View>
 
-            {/* Status toggle */}
-            <TouchableOpacity
-              className={`flex-row items-center self-start px-4 py-2.5 rounded-xl gap-2 mb-2 ${
-                form.status === "confirmed" ? "bg-green-50" : "bg-amber-50"
-              }`}
-              onPress={() => patch("status", form.status === "confirmed" ? "pending" : "confirmed")}
-              activeOpacity={0.8}
-            >
-              {form.status === "confirmed"
-                ? <CheckCircle2 size={16} color="#16A34A" />
-                : <Clock size={16} color="#D97706" />
-              }
-              <Text className={`text-xs font-semibold ${form.status === "confirmed" ? "text-green-600" : "text-amber-600"}`}>
-                {form.status === "confirmed" ? t.statusConfirmed : t.statusPending}
-              </Text>
-            </TouchableOpacity>
-
-            {/* Action toggles */}
-            <View className="flex-row gap-3 mb-2">
+            {/* Status + Recorrente + Observação — mesma linha */}
+            <View className="flex-row gap-2 mb-2 flex-wrap">
+              <TouchableOpacity
+                className={`flex-row items-center px-4 py-2.5 rounded-xl gap-2 ${
+                  form.status === "confirmed" ? "bg-green-50" : "bg-amber-50"
+                }`}
+                onPress={() => patch("status", form.status === "confirmed" ? "pending" : "confirmed")}
+                activeOpacity={0.8}
+              >
+                {form.status === "confirmed"
+                  ? <CheckCircle2 size={16} color="#16A34A" />
+                  : <Clock size={16} color="#D97706" />
+                }
+                <Text className={`text-xs font-semibold ${form.status === "confirmed" ? "text-green-600" : "text-amber-600"}`}>
+                  {form.status === "confirmed" ? t.statusConfirmed : t.statusPending}
+                </Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 className={`flex-row items-center px-4 py-2.5 rounded-xl gap-2 ${form.recurring ? "bg-primary/10" : "bg-gray-50"}`}
                 onPress={() => patch("recurring", !form.recurring)}
@@ -613,7 +735,7 @@ function TransactionFormModal({
             {form.recurring && (
               <View className="bg-gray-50 rounded-xl px-4 py-3 mb-2">
                 <Text className="text-xs font-semibold text-gray-400 uppercase mb-2">{t.recurrenceTypeLabel}</Text>
-                <View className="flex-row gap-2 mb-2">
+                <View className="flex-row gap-2">
                   {(["weekly", "monthly", "yearly"] as const).map((r) => (
                     <TouchableOpacity
                       key={r}
@@ -627,18 +749,6 @@ function TransactionFormModal({
                     </TouchableOpacity>
                   ))}
                 </View>
-                {form.recurrence === "monthly" && (
-                  <View className="flex-row items-center gap-2">
-                    <Text className="text-xs text-gray-500">{t.dueDayLabel}:</Text>
-                    <TextInput
-                      className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-800 w-16 text-center"
-                      value={form.dueDay}
-                      onChangeText={(v) => patch("dueDay", v.replace(/[^0-9]/g, ""))}
-                      keyboardType="numeric"
-                      maxLength={2}
-                    />
-                  </View>
-                )}
               </View>
             )}
 
@@ -669,23 +779,6 @@ function TransactionFormModal({
         </View>
       </KeyboardAvoidingView>
 
-      {/* Sub-modals */}
-      <PickerModal
-        visible={showAccountPicker}
-        title={t.selectAccount}
-        items={accounts.map((a) => ({ id: a.id, name: a.name, icon: a.icon }))}
-        onSelect={(id, name) => { patch("accountId", id); patch("accountName", name) }}
-        onClose={() => setShowAccountPicker(false)}
-        searchPlaceholder="Pesquisar conta..."
-      />
-      <PickerModal
-        visible={showCategoryPicker}
-        title={t.selectCategory}
-        items={filteredCategories}
-        onSelect={(_, name) => patch("category", name)}
-        onClose={() => setShowCategoryPicker(false)}
-        searchPlaceholder={t.categorySearchPlaceholder}
-      />
     </Modal>
   )
 }
@@ -711,8 +804,6 @@ function TransferFormModal({
   const [date, setDate] = useState(formatDateForInput(new Date()))
   const [notes, setNotes] = useState("")
   const [saving, setSaving] = useState(false)
-  const [showFromPicker, setShowFromPicker] = useState(false)
-  const [showToPicker, setShowToPicker] = useState(false)
   const { width } = useWindowDimensions()
   const isDesktop = width >= 768
 
@@ -725,11 +816,11 @@ function TransferFormModal({
     const parsedAmount = parseAmount(amount)
     const parsedDate = parseDateInput(date)
     if (!parsedAmount || !parsedDate || !fromId || !toId) {
-      Alert.alert(t.validationError, "Preenche todos os campos da transferência.")
+      Alert.alert(t.validationError, t.transferValidationMsg)
       return
     }
     if (fromId === toId) {
-      Alert.alert("Erro", "A conta de origem e destino não podem ser iguais.")
+      Alert.alert(t.validationError, t.transferSameAccountError)
       return
     }
     setSaving(true)
@@ -766,8 +857,8 @@ function TransferFormModal({
       onSaved()
       onClose()
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Não foi possível guardar a transferência."
-      Alert.alert("Erro ao guardar", msg)
+      const msg = e instanceof Error ? e.message : t.errorSaveMsgTransfer
+      Alert.alert(t.errorSave, msg)
     } finally {
       setSaving(false)
     }
@@ -792,32 +883,26 @@ function TransferFormModal({
             </TouchableOpacity>
           </View>
 
-          <View className="px-5 pt-4 pb-2">
+          <View className="px-5 pt-4 pb-2" style={{ zIndex: 1 }}>
             {/* From + To accounts */}
-            <View className="flex-row gap-3 mb-3">
-              <TouchableOpacity
-                className="flex-1 bg-gray-50 rounded-xl px-3 py-3 flex-row items-center"
-                onPress={() => setShowFromPicker(true)}
-                activeOpacity={0.8}
-              >
-                <Text className="flex-1 text-sm text-gray-700" numberOfLines={1}>
-                  {fromName || t.fromAccount}
-                </Text>
-                <ChevronDown size={14} color="#9CA3AF" />
-              </TouchableOpacity>
+            <View className="flex-row gap-3 mb-3" style={{ zIndex: 10 }}>
+              <DropdownPicker
+                value={fromName}
+                placeholder={t.fromAccount}
+                items={accounts.map((a) => ({ id: a.id, name: a.name, icon: a.icon }))}
+                onSelect={(id, name) => { setFromId(id); setFromName(name) }}
+                searchPlaceholder={t.searchPlaceholder}
+              />
               <View className="items-center justify-center px-1">
                 <ArrowRight size={16} color="#9CA3AF" />
               </View>
-              <TouchableOpacity
-                className="flex-1 bg-gray-50 rounded-xl px-3 py-3 flex-row items-center"
-                onPress={() => setShowToPicker(true)}
-                activeOpacity={0.8}
-              >
-                <Text className="flex-1 text-sm text-gray-700" numberOfLines={1}>
-                  {toName || t.toAccount}
-                </Text>
-                <ChevronDown size={14} color="#9CA3AF" />
-              </TouchableOpacity>
+              <DropdownPicker
+                value={toName}
+                placeholder={t.toAccount}
+                items={accounts.map((a) => ({ id: a.id, name: a.name, icon: a.icon }))}
+                onSelect={(id, name) => { setToId(id); setToName(name) }}
+                searchPlaceholder={t.searchPlaceholder}
+              />
             </View>
 
             {/* Amount + Date */}
@@ -835,7 +920,7 @@ function TransferFormModal({
               <View className="flex-1 bg-gray-50 rounded-xl px-3 py-3">
                 <TextInput
                   className="text-sm text-gray-700"
-                  placeholder="DD/MM/AAAA"
+                  placeholder={t.datePlaceholder}
                   value={date}
                   onChangeText={setDate}
                   keyboardType="numeric"
@@ -866,22 +951,6 @@ function TransferFormModal({
         </View>
       </KeyboardAvoidingView>
 
-      <PickerModal
-        visible={showFromPicker}
-        title={t.fromAccount}
-        items={accounts.map((a) => ({ id: a.id, name: a.name, icon: a.icon }))}
-        onSelect={(id, name) => { setFromId(id); setFromName(name) }}
-        onClose={() => setShowFromPicker(false)}
-        searchPlaceholder="Pesquisar..."
-      />
-      <PickerModal
-        visible={showToPicker}
-        title={t.toAccount}
-        items={accounts.map((a) => ({ id: a.id, name: a.name, icon: a.icon }))}
-        onSelect={(id, name) => { setToId(id); setToName(name) }}
-        onClose={() => setShowToPicker(false)}
-        searchPlaceholder="Pesquisar..."
-      />
     </Modal>
   )
 }
@@ -945,12 +1014,12 @@ export default function TransactionsScreen() {
 
   async function handleDelete(tx: TxRow) {
     Alert.alert(
-      "Eliminar transação",
-      `Tens a certeza que queres eliminar "${tx.description}"?`,
+      t.transactions.deleteTitle,
+      t.transactions.deleteConfirmMsg(tx.description),
       [
-        { text: "Cancelar", style: "cancel" },
+        { text: t.common.cancel, style: "cancel" },
         {
-          text: "Eliminar",
+          text: t.common.delete,
           style: "destructive",
           onPress: async () => {
             try {
@@ -965,8 +1034,8 @@ export default function TransactionsScreen() {
               if (error) throw new Error(error.message)
               fetchTransactions()
             } catch (e: unknown) {
-              const msg = e instanceof Error ? e.message : "Não foi possível eliminar."
-              Alert.alert("Erro", msg)
+              const msg = e instanceof Error ? e.message : t.transactions.errorDeleteMsg
+              Alert.alert(t.transactions.validationError, msg)
             }
           },
         },
@@ -995,8 +1064,8 @@ export default function TransactionsScreen() {
       }
       fetchTransactions()
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Não foi possível confirmar."
-      Alert.alert("Erro ao confirmar", msg)
+      const msg = e instanceof Error ? e.message : t.transactions.errorConfirmMsg
+      Alert.alert(t.transactions.errorConfirm, msg)
     }
   }
 
@@ -1012,7 +1081,7 @@ export default function TransactionsScreen() {
       .lte("date", to)
       .order("date", { ascending: false })
     if (error) {
-      Alert.alert("Erro ao carregar transações", error.message)
+      Alert.alert(t.transactions.errorLoad, error.message)
       setLoading(false)
       return
     }
